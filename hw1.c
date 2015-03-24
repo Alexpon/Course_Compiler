@@ -30,10 +30,9 @@ int main(){
 
         pf = fopen("main.c","r");
         while(fgets(buf, 512, pf) != NULL){
-                //printf("Line %d\n\t%s : %d\n", count, buf, strlen(buf));
                 printf("Line %d\n", count);
                 buf_length = strlen(buf);
-                while(i<buf_length-1){
+                while(i<buf_length-1){      //-1 delete '/n'
                         flag = 0;
                         if(buf[i] == '\t'){
                                 i++;
@@ -44,7 +43,7 @@ int main(){
                                 i++;
                         }
                         else{
-                                oper_re = is_operator(buf[i], buf[i+1], buf[i+3]);
+                                oper_re = is_operator(buf[i], buf[i+1], buf[i+2]);
                                 if (oper_re==1){
                                         if(new_word==1)
                                                 word_classification();
@@ -71,6 +70,10 @@ int main(){
                                                 i = i+4;
                                         }
                                         flag = 1;
+                                }
+                                else if (oper_re==5){
+                                        flag = 1;
+                                        i=buf_length;
                                 }
                                 if (is_symbol(buf[i])==1 && flag==0){
                                         if(new_word==1)
@@ -131,14 +134,16 @@ void init_keyArrray(){
 }
 
 int is_operator(char tmp1, char tmp2, char tmp3){
-        if((tmp1=='+' || tmp1=='-' || tmp1=='*' || tmp1=='/' || tmp1=='>' || tmp1=='<' || tmp1=='=' || tmp1=='!') && tmp2!='=')
+        if((tmp1=='+' || tmp1=='-' || tmp1=='*' || tmp1=='/' || tmp1=='>' || tmp1=='<' || tmp1=='=' || tmp1=='!') && (tmp2!='=' && tmp2!=47))
                 return 1;
         else if((tmp1=='>' && tmp2=='=') || (tmp1=='<' && tmp2=='=') || (tmp1=='=' && tmp2=='=') || (tmp1=='!' && tmp2=='=') || (tmp1=='&' && tmp2=='&') || (tmp1=='|' && tmp2=='|'))
                 return 2;
-        else if(tmp1=='\'' && tmp3=='\'')
+        else if(tmp1==39 && tmp3==39)
                 return 3;
-        else if((tmp2=='\\' && tmp3=='n') || (tmp2=='\\' && tmp3=='t'))
+        else if((tmp2==92 && tmp3=='n') || (tmp2==92 && tmp3=='t'))
                 return 4;
+        else if(tmp1==47 && tmp2==47)
+                return 5;
         else
                 return 0;
 }
@@ -179,17 +184,27 @@ void word_classification(){
 int is_number(){
         int x;
         int err_pos = 0;
-        if(word[0]=='0' || word[0]=='1' || word[0]=='2' || word[0]=='3' || word[0]=='4' || word[0]=='5' || word[0]=='6' || word[0]=='7' || word[0]=='8' || word[0]=='9'){
+        int floatA = 0;
+        if(word[0]>=48 && word[0]<=57){
                       err_pos = 1;
         }
         for(x=1; x<word_count; x++){
-                if(word[x]!='0' && word[x]!='1' && word[x]!='2' && word[x]!='3' && word[x]!='4' && word[x]!='5' && word[x]!='6' && word[x]!='7' && word[x]!='8' && word[x]!='9'){
-                        if(err_pos==1){
+                if(word[x]<48 || word[x]>57){
+                        if(word[x]==46){
+                                floatA++;
+                        }
+                        if(err_pos==1 && floatA!=1){
                                 printf("\tError:\t\t\t%s\n", word);
                                 return 1;
                         }
-                        return 0;
+                        else if(floatA!=1)
+                                return 0;
                 }
+        }
+        if(floatA>1){
+                printf("%d\n", floatA);
+                printf("\tError:\t\t\t%s\n", word);
+                return 1;
         }
         if(err_pos==1){
                 printf("\tNumber:\t\t\t%s\n", word);
@@ -203,9 +218,11 @@ int is_keyword(){
         int x=0, y;
         for(y=0; y<11; y++){
                 while(word[x] == keyArray[y][x]){
+                            if(keyArray[y][x]=='0')
+                                    break;
                             x = x+1;
                 }
-                if(keyArray[y][x+1]=='0'){
+                if(keyArray[y][x+1]=='0' && x == word_count){
                             printf("\tKeywords:\t\t%s\n", word);
                             return 1;
                 }
