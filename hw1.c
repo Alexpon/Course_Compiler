@@ -3,12 +3,12 @@
 #include<string.h>
 
 void init_keyArrray();
-int is_operator(char, char, char);
+int is_operator(char, char, char, char);
 int is_symbol(char);
 void store_word(char);
-void word_classification();
-int is_keyword();
-int is_number();
+void word_classification(FILE *);
+int is_keyword(FILE *);
+int is_number(FILE *);
 
 char keyArray[11][8];
 char word[128];
@@ -25,12 +25,14 @@ int main(){
         init_keyArrray();
 
         FILE *pf;
+        FILE *pw;
 
         char buf[512];
 
-        pf = fopen("main.c","r");
+        pf = fopen("main.c", "r");
+        pw = fopen("token.txt", "w");
         while(fgets(buf, 512, pf) != NULL){
-                printf("Line %d\n", count);
+                fprintf(pw, "Line %d\n", count);
                 buf_length = strlen(buf);
                 while(i<buf_length-1){      //-1 delete '/n'
                         flag = 0;
@@ -39,34 +41,34 @@ int main(){
                         }
                         else if(buf[i] == ' '){
                                 if(new_word==1)
-                                        word_classification();
+                                        word_classification(pw);
                                 i++;
                         }
                         else{
-                                oper_re = is_operator(buf[i], buf[i+1], buf[i+2]);
+                                oper_re = is_operator(buf[i], buf[i+1], buf[i+2], buf[i+3]);
                                 if (oper_re==1){
                                         if(new_word==1)
-                                                word_classification();
-                                        printf("\tOperators:\t\t%c\n", buf[i]);
+                                                word_classification(pw);
+                                        fprintf(pw, "\tOperators:\t\t%c\n", buf[i]);
                                         i = i+1;
                                         flag = 1;
                                 }
                                 else if (oper_re==2){
                                         if(new_word==1)
-                                                word_classification();
-                                        printf("\tOperators:\t\t%c%c\n", buf[i], buf[i+1]);
+                                                word_classification(pw);
+                                        fprintf(pw, "\tOperators:\t\t%c%c\n", buf[i], buf[i+1]);
                                         i = i+2;
                                         flag = 1;
                                 }
                                 else if (oper_re==3 || oper_re==4){
                                         if(new_word==1)
-                                                word_classification();
+                                                word_classification(pw);
                                         if(oper_re==3){
-                                                printf("\tChar:\t\t\t%c%c%c\n", buf[i], buf[i+1], buf[i+2]);
+                                                fprintf(pw, "\tChar:\t\t\t%c%c%c\n", buf[i], buf[i+1], buf[i+2]);
                                                 i = i+3;
                                         }
                                         else{
-                                                printf("\tChar:\t\t\t%c%c%c%c\n", buf[i], buf[i+1], buf[i+2], buf[i+3]);
+                                                fprintf(pw, "\tChar:\t\t\t%c%c%c%c\n", buf[i], buf[i+1], buf[i+2], buf[i+3]);
                                                 i = i+4;
                                         }
                                         flag = 1;
@@ -77,8 +79,8 @@ int main(){
                                 }
                                 if (is_symbol(buf[i])==1 && flag==0){
                                         if(new_word==1)
-                                                word_classification();
-                                        printf("\tSpecial Symbols:\t%c\n", buf[i]);
+                                                word_classification(pw);
+                                        fprintf(pw, "\tSpecial Symbols:\t%c\n", buf[i]);
                                         i = i+1;
                                         flag = 1;
                                 }
@@ -93,17 +95,12 @@ int main(){
                 memset(buf, '\0', buf_length);
         }
         fclose(pf);
-
-        for(i=0; i<11; i++){
-                for(j=0; j<8; j++){
-                    printf("%c ", keyArray[i][j]);
-                }
-                printf("\n");
-        }
+        fclose(pw);
 
         return 0;
 }
 
+//If you have new keyword, you can add it from here
 void init_keyArrray(){
         int i, j;
         for(i=0; i<11; i++){
@@ -133,14 +130,15 @@ void init_keyArrray(){
 
 }
 
-int is_operator(char tmp1, char tmp2, char tmp3){
+//To determine whether it is an operator or char(Use ASCII code)
+int is_operator(char tmp1, char tmp2, char tmp3, char tmp4){
         if((tmp1=='+' || tmp1=='-' || tmp1=='*' || tmp1=='/' || tmp1=='>' || tmp1=='<' || tmp1=='=' || tmp1=='!') && (tmp2!='=' && tmp2!=47))
                 return 1;
         else if((tmp1=='>' && tmp2=='=') || (tmp1=='<' && tmp2=='=') || (tmp1=='=' && tmp2=='=') || (tmp1=='!' && tmp2=='=') || (tmp1=='&' && tmp2=='&') || (tmp1=='|' && tmp2=='|'))
                 return 2;
         else if(tmp1==39 && tmp3==39)
                 return 3;
-        else if((tmp2==92 && tmp3=='n') || (tmp2==92 && tmp3=='t'))
+        else if((tmp1==39 && tmp2==92 && tmp3=='n' && tmp4==39) || (tmp1==39 && tmp2==92 && tmp3=='t' && tmp4==39))
                 return 4;
         else if(tmp1==47 && tmp2==47)
                 return 5;
@@ -148,6 +146,7 @@ int is_operator(char tmp1, char tmp2, char tmp3){
                 return 0;
 }
 
+//To determine whether it is operator or not
 int is_symbol(char tmp){
         if(tmp=='[' || tmp==']' || tmp=='(' || tmp==')' || tmp=='{' || tmp=='}' || tmp==';' || tmp==',' )
                 return 1;
@@ -167,11 +166,11 @@ void store_word(char ch){
         }
 }
 
-//Num Err or Id
-void word_classification(){
-        if(is_number()==0){
-                if(is_keyword()==0){
-                        printf("\tIdentifier:\t\t%s\n", word);
+//Num Err or Id(If the word is not number or keyword, then it is identifier)
+void word_classification(FILE *pw){
+        if(is_number(pw)==0){
+                if(is_keyword(pw)==0){
+                        fprintf(pw, "\tIdentifier:\t\t%s\n", word);
                 }
         }
 
@@ -181,12 +180,15 @@ void word_classification(){
 }
 
 //Num or Err
-int is_number(){
+int is_number(FILE *pw){
         int x;
         int err_pos = 0;
         int floatA = 0;
-        if(word[0]>=48 && word[0]<=57){
-                      err_pos = 1;
+        if(word[0]>=48 && word[0]<=57 || word[0]=='.'){
+                        if(word[0]==46){
+                                floatA++;
+                        }
+                        err_pos = 1;
         }
         for(x=1; x<word_count; x++){
                 if(word[x]<48 || word[x]>57){
@@ -194,7 +196,7 @@ int is_number(){
                                 floatA++;
                         }
                         if(err_pos==1 && floatA!=1){
-                                printf("\tError:\t\t\t%s\n", word);
+                                fprintf(pw, "\tError:\t\t\t%s\n", word);
                                 return 1;
                         }
                         else if(floatA!=1)
@@ -202,28 +204,29 @@ int is_number(){
                 }
         }
         if(floatA>1){
-                printf("%d\n", floatA);
-                printf("\tError:\t\t\t%s\n", word);
+                fprintf(pw, "%d\n", floatA);
+                fprintf(pw, "\tError:\t\t\t%s\n", word);
                 return 1;
         }
         if(err_pos==1){
-                printf("\tNumber:\t\t\t%s\n", word);
+                fprintf(pw, "\tNumber:\t\t\t%s\n", word);
                 return 1;
         }
         else    return 0;
 
 }
 
-int is_keyword(){
+//To determind whether it is keyword or not
+int is_keyword(FILE *pw){
         int x=0, y;
         for(y=0; y<11; y++){
-                while(word[x] == keyArray[y][x]){
+                while(word[x] == keyArray[y][x] && x<word_count){
                             if(keyArray[y][x]=='0')
                                     break;
                             x = x+1;
                 }
-                if(keyArray[y][x+1]=='0' && x == word_count){
-                            printf("\tKeywords:\t\t%s\n", word);
+                if(keyArray[y][x]=='0' && x == word_count){
+                            fprintf(pw, "\tKeywords:\t\t%s\n", word);
                             return 1;
                 }
                 x = 0;
