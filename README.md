@@ -34,5 +34,5 @@ Process：本次作業用到八個Functions，分別是
 7. is_keyword(FILE *)
 	判斷是否為keyword並將結果輸出
 
-8. is_number(FILE *);
+8. is_number(FILE *)
 	判斷是否為number或是error並將結果輸出
