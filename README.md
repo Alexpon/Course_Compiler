@@ -1,8 +1,10 @@
-Laguage：C
+#Compiler
 
+Laguage：C
 
 Environment：Code::Blocks
 
+Lexier:
 
 Process：本次作業用到八個Functions，分別是
 
@@ -65,3 +67,7 @@ Process：本次作業用到八個Functions，分別是
 8. is_number(FILE *)
 
 	判斷是否為number或是error並將結果輸出
+
+Parser:
+
+to be continue
