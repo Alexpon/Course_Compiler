@@ -9,7 +9,7 @@ void nonTerminal(char *);
 void setNontermianl(int, int, int);
 void findFollow();
 
-char grammerMap[100][32]={};
+char grammerMap[100][64]={};
 char firstMap[32][128]={};
 int line;
 int firstTableRow;
@@ -50,7 +50,7 @@ void scanner(){
     char tmp[20]={};
     firstTableRow = 0;
     for(row=line-1; row>=0; row--){
-        for(col=0; col<32; col++){
+        for(col=0; col<64; col++){
 
             if(grammerMap[row][0] == '\t')
                 break;
@@ -58,7 +58,7 @@ void scanner(){
             tmp[ctmp]=grammerMap[row][col];
             ctmp++;
 
-            if(grammerMap[row][col] == '\0'){
+            if(grammerMap[row][col+1] == '\0'){
                 findFirst(tmp, row);
                 memset(tmp, '\0', ctmp);
                 ctmp=0;
@@ -131,9 +131,12 @@ void nonTerminal(char *state){
         }
     }
     if(equalRow==100){
-        firstMap[firstTableRow][firstTableCol] =  equalRow+48;
-        firstMap[firstTableRow][firstTableCol+1] =  ' ';
-        firstTableCol+=2;
+        for(i=0; i<strlen(state); i++){
+            firstMap[firstTableRow][firstTableCol+i] = state[i];
+        }
+        firstTableCol+=i;
+        firstMap[firstTableRow][firstTableCol] = ' ';
+        firstTableCol++;
     }
 }
 
@@ -149,6 +152,7 @@ void setNontermianl(int nowRow, int nowCol, int refRow){
         nowCol++;
         refCol++;
     }
+    //firstMap[nowRow][nowCol] = ' ';
     firstTableCol=nowCol;
 }
 
