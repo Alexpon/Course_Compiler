@@ -7,6 +7,7 @@ void findFirst(char *, int);
 void setFirst(char *, int);
 void nonTerminal(char *);
 void setNontermianl(int, int, int);
+void reSetNonterminal();
 void findFollow();
 
 char grammerMap[100][64]={};
@@ -14,16 +15,20 @@ char firstMap[32][128]={};
 int line;
 int firstTableRow;
 int firstTableCol;
+int firstMapTotalRow;
+
 int main(){
     readFile();
     scanner();
-    int i, j;
+    reSetNonterminal();
+
+    /*int i, j;
     for(i=0; i<32; i++){
         for(j=0; j<128; j++){
             printf("%c", firstMap[i][j]);
         }
         printf("\n");
-    }
+    }*/
 
     return 0;
 }
@@ -152,8 +157,78 @@ void setNontermianl(int nowRow, int nowCol, int refRow){
         nowCol++;
         refCol++;
     }
-    //firstMap[nowRow][nowCol] = ' ';
     firstTableCol=nowCol;
+}
+
+void reSetNonterminal(){
+    /**
+    firstMapTotalRow = firstTableRow;
+    for(firstTableRow = firstMapTotalRow-1; firstTableRow>=0; firstTableRow--){
+        if(firstMap[firstTableRow][0] == '\t'){
+            for(col=0; col<64; col++){
+
+            }
+        }
+    }**/
+
+    int row, col;
+    int i, j;
+    int equalRow, firCol=0, temCol;
+    int ctmp = 0;
+    char tmp[20] = {};
+    for(row=0; row<firstTableRow; row++){
+        while(firstMap[row][firCol] != ':'){                   //find the first col in ref row
+            printf("%c", firstMap[row][firCol]);
+            firCol++;
+        }
+        for(col=firCol; col<128; col++){     //col=0 always is '\t'
+            if(firstMap[row][col]>=65 && firstMap[row][col]<=90){
+                temCol = col;
+                while(firstMap[row][temCol] != ' ' && firstMap[row][temCol] != '\0'){   //store nonterminal into tmp
+                    tmp[ctmp] = firstMap[row][temCol];
+                    ctmp++;
+                    temCol++;
+
+                    if(firstMap[row][temCol] == ' ' || firstMap[row][temCol] == '\0'){  //end of nonterminal
+                        col = temCol;                                              //change col to new col
+                        for(i=row; i<line; i++){                                            //find the nonterminal to match tmp
+                            equalRow = i;
+                            for(j=0; j<strlen(tmp); j++){
+                                if(tmp[j]!=firstMap[i][j]){
+                                    equalRow = 100;
+                                }
+                            }
+                            if(firstMap[equalRow][strlen(tmp)+1] != '\t' && equalRow != 100){
+                                equalRow = 100;
+                            }
+                            if(equalRow!=100){                                              //already find the match state, row=equalRow
+
+                                //setNontermianl(firstTableRow, firstTableCol, equalRow);
+                                int refCol=0;
+                                while(firstMap[equalRow][refCol] != ':'){                   //find the first col in ref row
+                                    refCol++;
+                                }
+                                refCol++; // !!?
+                                while(firstMap[equalRow][refCol] != '\0'){                  //print out the terminal to the end of ref row
+                                    //firstMap[nowRow][nowCol] = firstMap[refRow][refCol];
+                                    printf("%c", firstMap[equalRow][refCol]);
+                                    refCol++;
+                                }
+                            }
+                        }
+                        memset(tmp, '\0', ctmp);
+                        ctmp=0;
+                        break;
+                    }
+                }
+            }
+            else{
+                printf("%c", firstMap[row][col]);
+            }
+        }
+        firCol = 0;
+        printf("\n");
+    }
 }
 
 void findFollow(){
