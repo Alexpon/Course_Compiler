@@ -9,29 +9,54 @@
 using namespace std;
 void init();
 void readGrammer();
-void scanner();
+void scanFirst();
 void reSetFirst();
 void writeFirst();
+void scanFollow();
+void setFollowRelative(int, int, int);
+void setFollowBasic(int, int, int);
+void mergeFollowBasic(int);
+void storeMerge(int);
 
-string grammerMap[95][10]={};
+string grammerMap[96][10]={};
 string firstMap[64][32]={};
 string finalFirstMap[64][32]={};
+string followRelative[32][2]={};
+string followBasic[32][32]={};
+string followMerge[32][32]={};
 int grammerRow;
 int firstRow;
 
 int main(){
     init();
     readGrammer();
-    scanner();
+    scanFirst();
     reSetFirst();
     writeFirst();
+    scanFollow();
+
     int i, j;
+    for(i=0; i<32; i++){
+        for(int j=0; j<2; j++){
+            cout << followRelative[i][j] << " ";
+        }
+        cout << endl;
+    }
+
+    cout << endl;
+
+    for(i=0; i<24; i++){
+        for(int j=0; j<32; j++){
+            cout << followMerge[i][j] << " ";
+        }
+        cout << endl;
+    }
     return 0;
 }
 
 void init(){
     int i, j;
-    for(i=0; i<95; i++){
+    for(i=0; i<96; i++){
         for(int j=0; j<10; j++){
             grammerMap[i][j]="\0";
         }
@@ -47,6 +72,7 @@ void init(){
 void readGrammer(){
 
     char line[128];
+    memset(line, '\0', sizeof(128));
     fstream fr;
     int row=0, col=0;
     int gRow=0, gCol=0;
@@ -79,7 +105,7 @@ void readGrammer(){
     fr.close();
 }
 
-void scanner(){
+void scanFirst(){
     int row;
     int refRow;
     int nonRow, nonCol=1;
@@ -168,4 +194,100 @@ void writeFirst(){
         fw << endl;
     }
     fw.close();
+}
+
+void scanFollow(){
+    int rcnt=0, bcnt=0;
+    int row, col;
+    int nonTerRow;
+    int i, flag=0;
+    for(nonTerRow=0; nonTerRow<firstRow; nonTerRow++){
+        for(row=0; row<95; row++){
+            for(col=0; col<10; col++){
+                if(finalFirstMap[nonTerRow][0] == grammerMap[row][col]){
+                    if(col==0){/*do nothing*/}
+                    else if(grammerMap[row][col+1] == "\0"){
+                        setFollowRelative(row, col, rcnt);
+                        rcnt++;
+                    }
+                    else{
+                        setFollowBasic(row, col, bcnt);
+                        bcnt++;
+                    }
+                }
+            }
+        }
+    }
+    mergeFollowBasic(bcnt);
+
+}
+
+void setFollowRelative(int row, int col, int cnt){
+    followRelative[cnt][0] = grammerMap[row][col];
+    while(grammerMap[row][0]=="\t"){
+        row--;
+    }
+    followRelative[cnt][1] = grammerMap[row][0];
+}
+
+void setFollowBasic(int row, int col, int cnt){
+    int i;
+    int tmpCol=1;
+    followBasic[cnt][0] = grammerMap[row][col];
+    followBasic[cnt][1] = grammerMap[row][col+1];
+    for(i=0; i<firstRow; i++){
+        if(grammerMap[row][col+1] == finalFirstMap[i][0]){
+            while(finalFirstMap[i][tmpCol] != "\0"){
+                followBasic[cnt][tmpCol] = finalFirstMap[i][tmpCol];
+                tmpCol++;
+            }
+            break;
+        }
+    }
+}
+
+void mergeFollowBasic(int cnt){
+    int row, col;
+    int i;
+    int tmpRow=1, tmpCol=1;
+    int tmpCnt=1;
+    int equalFlag=0;
+    for(i=0; i<cnt; i++){
+        while(followBasic[i][0]==followBasic[i+tmpRow][0]){
+            while(followBasic[i+tmpRow][tmpCol] != "\0"){
+                while(followBasic[i][tmpCnt] != "\0"){
+                    if(followBasic[i+tmpRow][tmpCol]==followBasic[i][tmpCnt]){
+                        equalFlag=1;
+                    }
+                    tmpCnt++;
+                }
+                if(equalFlag==0){
+                    followBasic[i][tmpCnt] = followBasic[i+tmpRow][tmpCol];
+                }
+                equalFlag=0;
+                tmpCol++;
+                tmpCnt=1;
+            }
+            tmpRow++;
+            tmpCol=1;
+        }
+        i=i+tmpRow-1;
+        tmpRow=1;
+    }
+    storeMerge(cnt);
+}
+
+void storeMerge(int cnt){
+    int i, j=0;
+    int row=0;
+    for(i=0; i<cnt; i++){
+        if(followBasic[i][0]!=followBasic[i-1][0]){
+            while(followBasic[i][j] != "\0"){
+                followMerge[row][j] = followBasic[i][j];
+                j++;
+            }
+            row++;
+            j=0;
+        }
+    }
 }
