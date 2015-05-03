@@ -70,4 +70,10 @@ Process：本次作業用到八個Functions，分別是
 
 Parser:
 
-to be continue
+Input: grammer.txt
+
+Output: set.txt , LLtable.txt , tree.txt
+
+progress: 33%
+
+completed output: set.txt

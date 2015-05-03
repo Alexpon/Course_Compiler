@@ -11,19 +11,22 @@ void init();
 void readGrammer();
 void scanFirst();
 void reSetFirst();
-void writeFirst();
-void scanFollow();
+void writeFile();
+int scanFollow();
 void setFollowRelative(int, int, int);
-void setFollowBasic(int, int, int);
+int setFollowBasic(int, int, int, int);
 void mergeFollowBasic(int);
 void storeMerge(int);
+void setFollow(int);
+
 
 string grammerMap[96][10]={};
 string firstMap[64][32]={};
 string finalFirstMap[64][32]={};
-string followRelative[32][2]={};
+string followRelative[64][2]={};
 string followBasic[32][32]={};
 string followMerge[32][32]={};
+string finalFollowMap[64][32]={};
 int grammerRow;
 int firstRow;
 
@@ -32,25 +35,10 @@ int main(){
     readGrammer();
     scanFirst();
     reSetFirst();
-    writeFirst();
-    scanFollow();
-
-    int i, j;
-    for(i=0; i<32; i++){
-        for(int j=0; j<2; j++){
-            cout << followRelative[i][j] << " ";
-        }
-        cout << endl;
-    }
-
-    cout << endl;
-
-    for(i=0; i<24; i++){
-        for(int j=0; j<32; j++){
-            cout << followMerge[i][j] << " ";
-        }
-        cout << endl;
-    }
+    int rcnt = scanFollow();
+    setFollow(rcnt);
+    setFollow(rcnt); //second time to make the table more correctly
+    writeFile();
     return 0;
 }
 
@@ -178,7 +166,7 @@ void reSetFirst(){
     }
 }
 
-void writeFirst(){
+void writeFile(){
     fstream fw;
     fw.open("set.txt",ios::out);
     if(!fw){
@@ -186,17 +174,43 @@ void writeFirst(){
         exit(1);
     }
     int i, j;
-    for(i=0; i<firstRow; i++){
-        fw << finalFirstMap[i][0] << "\t: ";
+    fw << "First" << endl;
+    for(i=1; i<firstRow; i++){
+        fw << finalFirstMap[i][0] << "\t";
+        if(finalFirstMap[i][0].size() < 17 && finalFirstMap[i][0].size() > 7){
+            fw << "\t";
+        }
+        else if(finalFirstMap[i][0].size() <= 7){
+            fw << "\t\t";
+        }
+        fw << ": ";
         for(int j=1; j<32; j++){
             fw << finalFirstMap[i][j] << " ";
         }
         fw << endl;
     }
+
+    fw << "\n\n\n";
+    fw << "Follow" << endl;
+    for(i=1; i<28; i++){
+        fw << finalFollowMap[i][0] << "\t";
+        if(finalFollowMap[i][0].size() < 17 && finalFollowMap[i][0].size() > 7){
+            fw << "\t";
+        }
+        else if(finalFollowMap[i][0].size() <= 7){
+            fw << "\t\t";
+        }
+        fw << ": ";
+        for(int j=1; j<32; j++){
+            fw << finalFollowMap[i][j] << " ";
+        }
+        fw << endl;
+    }
+
     fw.close();
 }
 
-void scanFollow(){
+int scanFollow(){
     int rcnt=0, bcnt=0;
     int row, col;
     int nonTerRow;
@@ -211,7 +225,9 @@ void scanFollow(){
                         rcnt++;
                     }
                     else{
-                        setFollowBasic(row, col, bcnt);
+                        if(setFollowBasic(row, col, bcnt, rcnt)==1){
+                            rcnt++;
+                        }
                         bcnt++;
                     }
                 }
@@ -219,7 +235,7 @@ void scanFollow(){
         }
     }
     mergeFollowBasic(bcnt);
-
+    return rcnt;
 }
 
 void setFollowRelative(int row, int col, int cnt){
@@ -230,19 +246,34 @@ void setFollowRelative(int row, int col, int cnt){
     followRelative[cnt][1] = grammerMap[row][0];
 }
 
-void setFollowBasic(int row, int col, int cnt){
+int setFollowBasic(int row, int col, int cnt, int rcnt){
     int i;
     int tmpCol=1;
+    int isEps=0;
     followBasic[cnt][0] = grammerMap[row][col];
     followBasic[cnt][1] = grammerMap[row][col+1];
     for(i=0; i<firstRow; i++){
         if(grammerMap[row][col+1] == finalFirstMap[i][0]){
             while(finalFirstMap[i][tmpCol] != "\0"){
-                followBasic[cnt][tmpCol] = finalFirstMap[i][tmpCol];
-                tmpCol++;
+                if(finalFirstMap[i][tmpCol] == "epsilon"){
+                    followRelative[rcnt][0] = grammerMap[row][col];
+                    followRelative[rcnt][1] = finalFirstMap[i][0];
+                    isEps=1;
+                    tmpCol++;
+                }
+                else{
+                    followBasic[cnt][tmpCol] = finalFirstMap[i][tmpCol];
+                    tmpCol++;
+                }
             }
             break;
         }
+    }
+    if(isEps==1){
+        return 1;
+    }
+    else{
+        return 0;
     }
 }
 
@@ -290,4 +321,59 @@ void storeMerge(int cnt){
             j=0;
         }
     }
+}
+
+void setFollow(int relativeRow){
+    int rcnt, ccnt=1;
+    int i, j=1;
+    int frow;
+    int refR1, refR2;
+    int refC1=1, refC2=1;
+    int equalFlag=0;
+    for(rcnt=0; rcnt<firstRow; rcnt++){
+        finalFollowMap[rcnt][0] = finalFirstMap[rcnt][0];
+        for(i=0; i<32; i++){
+            if(finalFollowMap[rcnt][0] == followMerge[i][0]){
+                while(followMerge[i][j] != "\0"){
+                    finalFollowMap[rcnt][ccnt] = followMerge[i][j];
+                    j++;
+                    ccnt++;
+                }
+                break;
+            }
+        }
+        ccnt=1;
+        j=1;
+    }
+    for(i=0; i<relativeRow; i++){
+        if(followRelative[i][0] != followRelative[i][1]){
+            //find reference row in final follow map
+            for(frow=0; frow<32; frow++){
+                if(followRelative[i][0] == finalFollowMap[frow][0]){
+                    refR1 = frow;
+                }
+                if(followRelative[i][1] == finalFollowMap[frow][0]){
+                    refR2 = frow;
+                }
+            }
+
+             while(finalFollowMap[refR2][refC2] != "\0"){
+                while(finalFollowMap[refR1][refC1] != "\0"){
+                    if(finalFollowMap[refR1][refC1] == finalFollowMap[refR2][refC2]){
+                        equalFlag=1;
+                    }
+                    refC1++;
+                }
+                if(equalFlag==0){
+                    finalFollowMap[refR1][refC1] = finalFollowMap[refR2][refC2];
+                }
+                equalFlag=0;
+                refC2++;
+                refC1 = 1;
+            }
+            refC2 = 1;
+        }
+        else{/*do nothing*/}
+    }
+
 }
