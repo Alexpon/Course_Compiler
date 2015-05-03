@@ -18,15 +18,18 @@ int setFollowBasic(int, int, int, int);
 void mergeFollowBasic(int);
 void storeMerge(int);
 void setFollow(int);
+int setLLTable();
+int is_in_First(string, string);
+void writeLLTable(int);
 
-
-string grammerMap[96][10]={};
+string grammerMap[100][10]={};
 string firstMap[64][32]={};
 string finalFirstMap[64][32]={};
 string followRelative[64][2]={};
 string followBasic[32][32]={};
 string followMerge[32][32]={};
 string finalFollowMap[64][32]={};
+string llTableMap[256][10]={};
 int grammerRow;
 int firstRow;
 
@@ -39,6 +42,33 @@ int main(){
     setFollow(rcnt);
     setFollow(rcnt); //second time to make the table more correctly
     writeFile();
+    int llrow = setLLTable();
+    writeLLTable(llrow);
+
+    int i, j;
+/*
+    for(i=0; i<llrow; i++){
+        for(int j=0; j<10; j++){
+            cout << llTableMap[i][j] << " ";
+        }
+        cout << endl;
+    }
+
+    cout << endl;
+
+    for(i=0; i<24; i++){
+        for(int j=0; j<32; j++){
+            cout << followMerge[i][j] << " ";
+        }
+        cout << endl;
+    }
+
+    for(i=0; i<100; i++){
+        for(int j=0; j<10; j++){
+            cout << grammerMap[i][j] << " ";
+        }
+        cout << endl;
+    }*/
     return 0;
 }
 
@@ -104,7 +134,7 @@ void scanFirst(){
                 firstMap[frow][fcol] = grammerMap[row][0];
                 fcol++;
                 refRow = row+1;
-                while(grammerMap[refRow][0] == "\t" && refRow <94){
+                while(grammerMap[refRow][0] == "\t" && refRow <96){
                     str = grammerMap[refRow][1];
                     if(str[0]>=65 && str[0]<=90){
                         firstMap[frow][fcol]=str;
@@ -175,7 +205,7 @@ void writeFile(){
     }
     int i, j;
     fw << "First" << endl;
-    for(i=1; i<firstRow; i++){
+    for(i=0; i<firstRow; i++){
         fw << finalFirstMap[i][0] << "\t";
         if(finalFirstMap[i][0].size() < 17 && finalFirstMap[i][0].size() > 7){
             fw << "\t";
@@ -192,7 +222,7 @@ void writeFile(){
 
     fw << "\n\n\n";
     fw << "Follow" << endl;
-    for(i=1; i<28; i++){
+    for(i=0; i<28; i++){
         fw << finalFollowMap[i][0] << "\t";
         if(finalFollowMap[i][0].size() < 17 && finalFollowMap[i][0].size() > 7){
             fw << "\t";
@@ -375,5 +405,112 @@ void setFollow(int relativeRow){
         }
         else{/*do nothing*/}
     }
+}
 
+int setLLTable(){
+    int row, col=1;
+    int graRow;
+    int llrow=0, llcol=2;
+    int graCol=1;
+    for(row=0; row<firstRow; row++){
+        while(finalFirstMap[row][col] != "\0"){
+            if(finalFirstMap[row][col] == "epsilon"){
+                while(finalFollowMap[row][graCol] != "\0"){
+                    llTableMap[llrow][0] = finalFollowMap[row][0];
+                    llTableMap[llrow][1] = finalFollowMap[row][graCol];
+                    llTableMap[llrow][2] = "epsilon";
+                    graCol++;
+                    llrow++;
+                }
+                llrow--;
+            }
+            else{
+                graRow = is_in_First(finalFirstMap[row][0], finalFirstMap[row][col]);
+                llTableMap[llrow][0] = finalFirstMap[row][0];
+                llTableMap[llrow][1] = finalFirstMap[row][col];
+                //cout << llTableMap[llrow][0] << "\t" << llTableMap[llrow][1] << "\t" << graRow << endl;
+                while(grammerMap[graRow][graCol] != "\0"){
+                    llTableMap[llrow][llcol] = grammerMap[graRow][graCol];
+                    llcol++;
+                    graCol++;
+                }
+            }
+                llrow++;
+                llcol = 2;
+                graRow = 1;
+                graCol = 1;
+                col++;
+
+        }
+        col=1;
+    }
+    return llrow;
+
+}
+
+int is_in_First(string str, string sym){
+    int graRow, col;
+    int tmp;
+    int i, j=1;
+    for(graRow=0; graRow<96; graRow++){
+        if(str == grammerMap[graRow][0]){
+            break;
+        }
+    }
+    graRow++;
+    tmp = graRow;
+    while(grammerMap[graRow][0] == "\t"){
+        if(grammerMap[graRow][1] == sym){
+            return graRow;
+        }
+        graRow++;
+    }
+    graRow = tmp;
+    while(grammerMap[graRow][0] == "\t"){
+        for(i=0; i<firstRow; i++){
+            if(grammerMap[graRow][1] == firstMap[i][0]){
+                break;
+            }
+        }
+        while(firstMap[i][j] != "\0"){
+            if(sym == firstMap[i][j]){
+                return graRow;
+            }
+            j++;
+        }
+        j=0;
+        graRow++;
+    }
+    return tmp;
+}
+
+void writeLLTable(int llrow){
+    fstream fw;
+    fw.open("LLtable.txt",ios::out);
+    if(!fw){
+        cout << "Fail to open file" << endl;
+        exit(1);
+    }
+
+    int i, j;
+    fw << "S" << endl;
+
+    for(i=0; i<llrow; i++){
+        fw << llTableMap[i][0] << "\t";
+        if(llTableMap[i][0].size() < 17 && llTableMap[i][0].size() > 7){
+            fw << "\t";
+        }
+        else if(llTableMap[i][0].size() <= 7){
+            fw << "\t\t";
+        }
+        fw << llTableMap[i][1] << "\t\t";
+
+        for(int j=2; j<10; j++){
+            fw << llTableMap[i][j] << " ";
+        }
+        fw << endl;
+    }
+
+
+    fw.close();
 }
