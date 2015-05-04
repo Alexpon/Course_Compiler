@@ -21,6 +21,46 @@ void setFollow(int);
 int setLLTable();
 int is_in_First(string, string);
 void writeLLTable(int);
+void simple_Lexical();
+int is_keyword(string);
+int is_num(string);
+int is_id(string);
+
+class Stack
+{
+      private:
+              int top;
+              int size;
+              string *array;
+      public:
+             Stack(int s)
+             {
+                 size=s;
+                 array=new string[s];
+                 top=0;
+             }
+
+             void push(string item)
+             {
+                  if(top==size)
+                      cout<<"Stack is full!"<<endl;
+                  else
+                      *(array+top)=item;
+                      top++;
+             }
+             string pop()
+             {
+                 if(top==0)
+                     cout<<"Stack is empty!"<<endl;
+                 else
+                 {
+                     string item;
+                     top--;
+                     item=*(array+top);
+                     return item;
+                 }
+             }
+};
 
 string grammerMap[100][10]={};
 string firstMap[64][32]={};
@@ -30,8 +70,13 @@ string followBasic[32][32]={};
 string followMerge[32][32]={};
 string finalFollowMap[64][32]={};
 string llTableMap[256][10]={};
+string mainMap[128]={};
 int grammerRow;
 int firstRow;
+Stack stk(100);
+
+
+
 
 int main(){
     init();
@@ -45,30 +90,12 @@ int main(){
     int llrow = setLLTable();
     writeLLTable(llrow);
 
+    simple_Lexical();
+
     int i, j;
-/*
-    for(i=0; i<llrow; i++){
-        for(int j=0; j<10; j++){
-            cout << llTableMap[i][j] << " ";
-        }
-        cout << endl;
-    }
-
-    cout << endl;
-
-    for(i=0; i<24; i++){
-        for(int j=0; j<32; j++){
-            cout << followMerge[i][j] << " ";
-        }
-        cout << endl;
-    }
-
-    for(i=0; i<100; i++){
-        for(int j=0; j<10; j++){
-            cout << grammerMap[i][j] << " ";
-        }
-        cout << endl;
-    }*/
+    for(i=0;i<33;i++)
+        cout<<stk.pop()<<" ";
+    cout<<endl;
     return 0;
 }
 
@@ -428,7 +455,6 @@ int setLLTable(){
                 graRow = is_in_First(finalFirstMap[row][0], finalFirstMap[row][col]);
                 llTableMap[llrow][0] = finalFirstMap[row][0];
                 llTableMap[llrow][1] = finalFirstMap[row][col];
-                //cout << llTableMap[llrow][0] << "\t" << llTableMap[llrow][1] << "\t" << graRow << endl;
                 while(grammerMap[graRow][graCol] != "\0"){
                     llTableMap[llrow][llcol] = grammerMap[graRow][graCol];
                     llcol++;
@@ -513,4 +539,77 @@ void writeLLTable(int llrow){
 
 
     fw.close();
+}
+
+void simple_Lexical(){
+    char line[128];
+    int col=0;
+    int mainCnt=0;
+    int i;
+
+    memset(line, '\0', sizeof(128));
+    fstream fr;
+    fr.open("main.c",ios::in);
+    if(!fr){
+        cout << "Fail to open file" << endl;
+        exit(1);
+    }
+    while(fr.getline(line,sizeof(line),'\n')){
+            while(line[col]!='\0'){
+                if(line[col]=='\t'){
+                    col++;
+                }
+                while(line[col]!='\0' && line[col]!=' ' && line[col]!='\t'){
+                    mainMap[mainCnt] += line[col];
+                    col++;
+                }
+                col++;
+                mainCnt++;
+            }
+            col=0;
+            memset(line, '\0', sizeof(line));
+    }
+    fr.close();
+    //push to stack
+    stk.push("$");
+    for(i=mainCnt-1; i>=0; i--){
+        if(is_keyword(mainMap[i])==1){
+            stk.push(mainMap[i]);
+        }
+        else if(is_num(mainMap[i])==1){
+            stk.push("num");
+        }
+        else if(is_id(mainMap[i])==1){
+            stk.push("id");
+        }
+    }
+}
+
+int is_keyword(string str){
+    if(str=="int" || str=="char" || str=="double" || str=="float" || str=="if" || str=="else" || str=="while" || str=="break" ||  str=="for" || str=="print" || str=="return" ||
+       str=="{" || str=="}" || str=="[" || str=="]" || str=="(" || str==")" || str==";" || str=="," || str=="+" || str=="-" || str=="*" || str=="/" || str=="=" ||
+       str==">" || str=="<" || str==">=" || str=="<=" || str=="!" || str=="!=" || str=="==" || str=="&&" || str=="||"){
+        return 1;
+    }
+    else{
+        return 0;
+    }
+}
+
+int is_num(string str){
+    if(str[0]>=48 && str[0]<=57){
+        return 1;
+    }
+    else{
+        return 0;
+    }
+}
+
+int is_id(string str){
+    if((str[0]>=65 && str[0]<=90) || (str[0]>=97 && str[0]<=122)){
+        return 1;
+    }
+    else{
+        return 0;
+    }
 }
