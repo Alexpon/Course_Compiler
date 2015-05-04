@@ -25,6 +25,7 @@ void simple_Lexical();
 int is_keyword(string);
 int is_num(string);
 int is_id(string);
+void buildTree(int);
 
 class Stack
 {
@@ -74,8 +75,7 @@ string mainMap[128]={};
 int grammerRow;
 int firstRow;
 Stack stk(100);
-
-
+Stack trace(100);
 
 
 int main(){
@@ -89,13 +89,8 @@ int main(){
     writeFile();
     int llrow = setLLTable();
     writeLLTable(llrow);
-
     simple_Lexical();
-
-    int i, j;
-    for(i=0;i<33;i++)
-        cout<<stk.pop()<<" ";
-    cout<<endl;
+    buildTree(llrow);
     return 0;
 }
 
@@ -563,26 +558,24 @@ void simple_Lexical(){
                     mainMap[mainCnt] += line[col];
                     col++;
                 }
+                if(is_keyword(mainMap[mainCnt])==1){
+                }
+                else if(is_num(mainMap[mainCnt])==1){
+                    mainMap[mainCnt] = "num";
+                }
+                else if(is_id(mainMap[mainCnt])==1){
+                 //   mainMap[mainCnt+1] = mainMap[mainCnt];
+                    mainMap[mainCnt] = "id";
+                //    mainCnt++;
+                }
                 col++;
                 mainCnt++;
             }
             col=0;
             memset(line, '\0', sizeof(line));
     }
+    mainMap[mainCnt+1] = "$";
     fr.close();
-    //push to stack
-    stk.push("$");
-    for(i=mainCnt-1; i>=0; i--){
-        if(is_keyword(mainMap[i])==1){
-            stk.push(mainMap[i]);
-        }
-        else if(is_num(mainMap[i])==1){
-            stk.push("num");
-        }
-        else if(is_id(mainMap[i])==1){
-            stk.push("id");
-        }
-    }
 }
 
 int is_keyword(string str){
@@ -611,5 +604,51 @@ int is_id(string str){
     }
     else{
         return 0;
+    }
+}
+
+void buildTree(int llrow){
+    trace.push("$");
+    trace.push("S");
+    int cnt = 1;
+    int cnt2;
+    int mainCnt = 0;
+    int llcnt = 2;
+    int refR;
+    string traceE;
+    while((traceE=trace.pop()) != "$"){
+
+        if(traceE == mainMap[mainCnt]){
+            cnt2=cnt;
+            for(int i=1; i<cnt2; i++){
+                cout << " ";
+            }
+            cout << cnt2 << " " << traceE << endl;
+            mainCnt++;
+        }
+        else{
+            for(refR=0; refR<llrow; refR++){
+                if(llTableMap[refR][0]==traceE && llTableMap[refR][1]==mainMap[mainCnt]){
+                    break;
+                }
+            }
+            if(refR > llrow){
+                cout << "This program is not fit the grammar" << endl;
+                system("pause");
+            }
+            while(llTableMap[refR][llcnt] != "\0"){
+                llcnt++;
+            }
+            for(int i=llcnt-1; i>=2; i--){
+                trace.push(llTableMap[refR][i]);
+            }
+            llcnt = 2;
+
+            for(int i=1; i<cnt; i++){
+                cout << " ";
+            }
+            cout << cnt << " " << traceE << endl;
+            cnt++;
+        }
     }
 }
