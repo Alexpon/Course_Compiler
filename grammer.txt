@@ -1,3 +1,5 @@
+S
+	Program $
 Program
 	DeclList
 DeclList
