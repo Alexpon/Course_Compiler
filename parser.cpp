@@ -27,21 +27,28 @@ int is_num(string);
 int is_id(string);
 void buildTree(int);
 
+struct Tree
+{
+   int index;
+   string value;
+};
+
+
 class Stack
 {
       private:
               int top;
               int size;
-              string *array;
+              Tree *array;
       public:
              Stack(int s)
              {
                  size=s;
-                 array=new string[s];
+                 array=new Tree[s];
                  top=0;
              }
 
-             void push(string item)
+             void push(Tree item)
              {
                   if(top==size)
                       cout<<"Stack is full!"<<endl;
@@ -49,13 +56,13 @@ class Stack
                       *(array+top)=item;
                       top++;
              }
-             string pop()
+             Tree pop()
              {
                  if(top==0)
                      cout<<"Stack is empty!"<<endl;
                  else
                  {
-                     string item;
+                     Tree item;
                      top--;
                      item=*(array+top);
                      return item;
@@ -72,11 +79,11 @@ string followMerge[32][32]={};
 string finalFollowMap[64][32]={};
 string llTableMap[256][10]={};
 string mainMap[128]={};
+
+
+
 int grammerRow;
 int firstRow;
-Stack stk(100);
-Stack trace(100);
-
 
 int main(){
     init();
@@ -564,9 +571,7 @@ void simple_Lexical(){
                     mainMap[mainCnt] = "num";
                 }
                 else if(is_id(mainMap[mainCnt])==1){
-                 //   mainMap[mainCnt+1] = mainMap[mainCnt];
                     mainMap[mainCnt] = "id";
-                //    mainCnt++;
                 }
                 col++;
                 mainCnt++;
@@ -608,47 +613,90 @@ int is_id(string str){
 }
 
 void buildTree(int llrow){
-    trace.push("$");
-    trace.push("S");
-    int cnt = 1;
-    int cnt2;
+    Stack trace(128);
     int mainCnt = 0;
     int llcnt = 2;
-    int refR;
-    string traceE;
-    while((traceE=trace.pop()) != "$"){
+    int refR, index;
+    int lastIndex;
+    int flag;
+    string lastvalue;
+    Tree tmpTree;
+    Tree newNode;
+    tmpTree.index=10;
+    tmpTree.value="$";
+    trace.push(tmpTree);
+    tmpTree.index=1;
+    tmpTree.value="S";
+    trace.push(tmpTree);
 
-        if(traceE == mainMap[mainCnt]){
-            cnt2=cnt;
-            for(int i=1; i<cnt2; i++){
-                cout << " ";
+    fstream fw;
+    fw.open("tree.txt",ios::out);
+    if(!fw){
+        cout << "Fail to open file" << endl;
+        exit(1);
+    }
+
+    tmpTree=trace.pop();
+    while(tmpTree.value != "$"){
+        index=tmpTree.index+1;
+        if(tmpTree.value == mainMap[mainCnt]){
+            for(int i=1; i<tmpTree.index; i++){
+                fw << "  ";
             }
-            cout << cnt2 << " " << traceE << endl;
+            fw << tmpTree.index << " " << tmpTree.value << endl;
             mainCnt++;
         }
-        else{
+        else{//Something wrong here
+            flag=0;
+            for(int i=1; i<tmpTree.index; i++){
+                fw << "  ";
+            }
+            fw << tmpTree.index << " " << tmpTree.value << endl;
+
             for(refR=0; refR<llrow; refR++){
-                if(llTableMap[refR][0]==traceE && llTableMap[refR][1]==mainMap[mainCnt]){
+                if(llTableMap[refR][0]==tmpTree.value && llTableMap[refR][1]==mainMap[mainCnt]){ //Something wrong here
                     break;
+                   flag=1;
                 }
             }
-            if(refR > llrow){
-                cout << "This program is not fit the grammar" << endl;
+            if(flag=0){//Something wrong here
+                cout << "Reject" << endl;
                 system("pause");
             }
-            while(llTableMap[refR][llcnt] != "\0"){
+            while(llTableMap[refR][llcnt] != "\0"){     //backward push
                 llcnt++;
             }
+
             for(int i=llcnt-1; i>=2; i--){
-                trace.push(llTableMap[refR][i]);
+                newNode.index = index;
+                newNode.value = llTableMap[refR][i];
+                trace.push(newNode);
             }
             llcnt = 2;
-
-            for(int i=1; i<cnt; i++){
-                cout << " ";
-            }
-            cout << cnt << " " << traceE << endl;
-            cnt++;
         }
+        lastIndex = index;
+        lastvalue = tmpTree.value;
+        tmpTree=trace.pop();
+    }
+
+    if(tmpTree.value == "$"){
+        for(refR=0; refR<llrow; refR++){
+            if(llTableMap[refR][0]==lastvalue && llTableMap[refR][1]=="$"){
+                break;
+            }
+        }
+        if(llTableMap[refR][2]=="epsilon"){
+            for(int i=1; i<lastIndex; i++){
+                fw << "  ";
+            }
+            fw << lastIndex << " " << llTableMap[refR][2] << endl;
+            cout << "Accept!" << endl;
+        }
+        else{
+            cout << "Reject!" << endl;
+        }
+    }
+    else{
+        cout << "Reject!" << endl;
     }
 }
