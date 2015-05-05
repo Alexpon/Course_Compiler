@@ -33,7 +33,6 @@ struct Tree
    string value;
 };
 
-
 class Stack
 {
       private:
@@ -98,6 +97,7 @@ int main(){
     writeLLTable(llrow);
     simple_Lexical();
     buildTree(llrow);
+
     return 0;
 }
 
@@ -468,12 +468,10 @@ int setLLTable(){
                 graRow = 1;
                 graCol = 1;
                 col++;
-
         }
         col=1;
     }
     return llrow;
-
 }
 
 int is_in_First(string str, string sym){
@@ -496,12 +494,12 @@ int is_in_First(string str, string sym){
     graRow = tmp;
     while(grammerMap[graRow][0] == "\t"){
         for(i=0; i<firstRow; i++){
-            if(grammerMap[graRow][1] == firstMap[i][0]){
+            if(grammerMap[graRow][1] == finalFirstMap[i][0]){
                 break;
             }
         }
-        while(firstMap[i][j] != "\0"){
-            if(sym == firstMap[i][j]){
+        while(finalFirstMap[i][j] != "\0"){
+            if(sym == finalFirstMap[i][j]){
                 return graRow;
             }
             j++;
@@ -509,7 +507,6 @@ int is_in_First(string str, string sym){
         j=0;
         graRow++;
     }
-    return tmp;
 }
 
 void writeLLTable(int llrow){
@@ -561,6 +558,9 @@ void simple_Lexical(){
                 if(line[col]=='\t'){
                     col++;
                 }
+                if(line[col]==' '){
+                    col++;
+                }
                 while(line[col]!='\0' && line[col]!=' ' && line[col]!='\t'){
                     mainMap[mainCnt] += line[col];
                     col++;
@@ -579,7 +579,7 @@ void simple_Lexical(){
             col=0;
             memset(line, '\0', sizeof(line));
     }
-    mainMap[mainCnt+1] = "$";
+    mainMap[mainCnt] = "$";
     fr.close();
 }
 
@@ -622,9 +622,6 @@ void buildTree(int llrow){
     string lastvalue;
     Tree tmpTree;
     Tree newNode;
-    tmpTree.index=10;
-    tmpTree.value="$";
-    trace.push(tmpTree);
     tmpTree.index=1;
     tmpTree.value="S";
     trace.push(tmpTree);
@@ -646,20 +643,19 @@ void buildTree(int llrow){
             fw << tmpTree.index << " " << tmpTree.value << endl;
             mainCnt++;
         }
-        else{//Something wrong here
+        else{
             flag=0;
             for(int i=1; i<tmpTree.index; i++){
                 fw << "  ";
             }
             fw << tmpTree.index << " " << tmpTree.value << endl;
-
             for(refR=0; refR<llrow; refR++){
-                if(llTableMap[refR][0]==tmpTree.value && llTableMap[refR][1]==mainMap[mainCnt]){ //Something wrong here
+                if(llTableMap[refR][0]==tmpTree.value && llTableMap[refR][1]==mainMap[mainCnt]){
                     break;
                    flag=1;
                 }
             }
-            if(flag=0){//Something wrong here
+            if(flag=0){
                 cout << "Reject" << endl;
                 system("pause");
             }
@@ -679,22 +675,13 @@ void buildTree(int llrow){
         tmpTree=trace.pop();
     }
 
-    if(tmpTree.value == "$"){
-        for(refR=0; refR<llrow; refR++){
-            if(llTableMap[refR][0]==lastvalue && llTableMap[refR][1]=="$"){
-                break;
-            }
-        }
-        if(llTableMap[refR][2]=="epsilon"){
-            for(int i=1; i<lastIndex; i++){
-                fw << "  ";
-            }
-            fw << lastIndex << " " << llTableMap[refR][2] << endl;
-            cout << "Accept!" << endl;
-        }
-        else{
-            cout << "Reject!" << endl;
-        }
+    for(int i=1; i<lastIndex; i++){
+        fw << "  ";
+    }
+    fw << lastIndex << " " << lastvalue << endl;
+
+    if(tmpTree.value == "$" && mainMap[mainCnt] == "$"){
+        cout << "Accept!" << endl;
     }
     else{
         cout << "Reject!" << endl;
