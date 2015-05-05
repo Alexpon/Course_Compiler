@@ -44,8 +44,52 @@
                       12 ExprIdTail
                         13 =
                         13 Expr
+                          14 num
+                          14 Expr'
+                            15 epsilon
                     11 ;
                   10 StmtList'
+                    11 StmtList
+                      12 Stmt
+                        13 Expr
+                          14 id
+                          14 ExprIdTail
+                            15 =
+                            15 Expr
+                              16 num
+                              16 Expr'
+                                17 epsilon
+                        13 ;
+                      12 StmtList'
+                        13 StmtList
+                          14 Stmt
+                            15 Expr
+                              16 id
+                              16 ExprIdTail
+                                17 =
+                                17 Expr
+                                  18 id
+                                  18 ExprIdTail
+                                    19 Expr'
+                                      20 BinOp
+                                        21 +
+                                      20 Expr
+                                        21 id
+                                        21 ExprIdTail
+                                          22 epsilon
+                            15 ;
+                          14 StmtList'
+                            15 StmtList
+                              16 Stmt
+                                17 return
+                                17 Expr
+                                  18 num
+                                  18 Expr'
+                                    19 epsilon
+                                17 ;
+                              16 StmtList'
+                                17 epsilon
                 9 }
         5 DeclList
           6 epsilon
+            7 epsilon
