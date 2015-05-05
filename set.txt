@@ -1,0 +1,61 @@
+First
+S			: int char double float epsilon                           
+Program			: int char double float epsilon                           
+DeclList		: int char double float epsilon                           
+DeclList'		: int char double float                            
+Decl			: ; [ (                             
+VarDecl			: int char double float                            
+VarDecl'		: ; [                              
+FunDecl			: (                               
+VarDeclList		: int char double float epsilon                           
+ParamDeclList		: int char double float epsilon                           
+ParamDeclListTail	: int char double float                            
+ParamDeclListTail'	: , epsilon                              
+ParamDecl		: int char double float                            
+ParamDecl'		: [ epsilon                              
+Block			: {                               
+Type			: int char double float                            
+StmtList		: ; - ! num ( id return break if while { print                    
+StmtList'		: ; - ! num ( id return break if while { print epsilon                   
+Stmt			: ; - ! num ( id return break if while { print                    
+Expr			: - ! num ( id                           
+ExprIdTail		: + - * / == != < <= > >= && || epsilon ( [ =                
+ExprArrayTail		: + - * / == != < <= > >= && || epsilon =                  
+Expr'			: + - * / == != < <= > >= && || epsilon                   
+ExprList		: - ! num ( id epsilon                          
+ExprListTail		: - ! num ( id                           
+ExprListTail'		: , epsilon                              
+UnaryOp			: - !                              
+BinOp			: + - * / == != < <= > >= && ||                    
+
+
+
+Follow
+S			:                                
+Program			: $                               
+DeclList		: $                               
+DeclList'		: int char double float $                           
+Decl			: int char double float $                           
+VarDecl			: int char double float ; - ! num ( id return break if while { print                
+VarDecl'		: int char double float $ ; - ! num ( id return break if while { print               
+FunDecl			: int char double float $                           
+VarDeclList		: ; - ! num ( id return break if while { print                    
+ParamDeclList		: )                               
+ParamDeclListTail	: )                               
+ParamDeclListTail'	: )                               
+ParamDecl		: , )                              
+ParamDecl'		: , )                              
+Block			: int char double float $ ; - ! num ( id return break if while { print else }             
+Type			: id                               
+StmtList		: }                               
+StmtList'		: }                               
+Stmt			: ; - ! num ( id return break if while { print else }                  
+Expr			: ; ) ] ,                            
+ExprIdTail		: ; ) ] ,                            
+ExprArrayTail		: ; ) ] ,                            
+Expr'			: ; ) ] ,                            
+ExprList		: )                               
+ExprListTail		: )                               
+ExprListTail'		: )                               
+UnaryOp			: - ! num ( id                           
+BinOp			: - ! num ( id                           
