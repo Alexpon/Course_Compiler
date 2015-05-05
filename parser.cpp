@@ -29,44 +29,46 @@ void buildTree(int);
 
 struct Tree
 {
-   int index;
-   string value;
+    int index;
+    string value;
 };
 
 class Stack
 {
-      private:
-              int top;
-              int size;
-              Tree *array;
-      public:
-             Stack(int s)
-             {
-                 size=s;
-                 array=new Tree[s];
-                 top=0;
-             }
-
-             void push(Tree item)
-             {
-                  if(top==size)
-                      cout<<"Stack is full!"<<endl;
-                  else
-                      *(array+top)=item;
-                      top++;
-             }
-             Tree pop()
-             {
-                 if(top==0)
-                     cout<<"Stack is empty!"<<endl;
-                 else
-                 {
-                     Tree item;
-                     top--;
-                     item=*(array+top);
-                     return item;
-                 }
-             }
+private:
+    int top;
+    int size;
+    Tree *array;
+public:
+    Stack(int s)
+    {
+        size=s;
+        array=new Tree[s];
+        top=0;
+    }
+    
+    void push(Tree item)
+    {
+        if(top==size)
+            cout<<"Stack is full!"<<endl;
+        else
+            *(array+top)=item;
+        top++;
+    }
+    Tree pop()
+    {
+        if(top==0)
+            cout<<"Stack is empty!"<<endl;
+        else
+        {
+            Tree item;
+            top--;
+            item=*(array+top);
+            return item;
+        }
+        Tree a;
+        return a; //add for compile
+    }
 };
 
 string grammerMap[100][10]={};
@@ -97,7 +99,7 @@ int main(){
     writeLLTable(llrow);
     simple_Lexical();
     buildTree(llrow);
-
+    
     return 0;
 }
 
@@ -117,7 +119,7 @@ void init(){
 }
 
 void readGrammer(){
-
+    
     char line[128];
     memset(line, '\0', sizeof(128));
     fstream fr;
@@ -128,25 +130,25 @@ void readGrammer(){
         cout << "Fail to open file" << endl;
         exit(1);
     }
-
+    
     while(fr.getline(line,sizeof(line),'\n')){
-            while(line[col]!='\0'){
-                if(line[col]=='\t'){
-                    grammerMap[gRow][gCol]="\t";
-                    gCol++;
-                    col++;
-                }
-                while(line[col]!='\0'&&line[col]!=' '){
-                    grammerMap[gRow][gCol] += line[col];
-                    col++;
-                }
-                col++;
+        while(line[col]!='\0'){
+            if(line[col]=='\t'){
+                grammerMap[gRow][gCol]="\t";
                 gCol++;
+                col++;
             }
-            col=0;
-            gRow++;
-            gCol=0;
-            memset(line, '\0', sizeof(line));
+            while(line[col]!='\0'&&line[col]!=' '){
+                grammerMap[gRow][gCol] += line[col];
+                col++;
+            }
+            col++;
+            gCol++;
+        }
+        col=0;
+        gRow++;
+        gCol=0;
+        memset(line, '\0', sizeof(line));
     }
     grammerRow = gRow;
     fr.close();
@@ -159,37 +161,37 @@ void scanFirst(){
     int frow=0, fcol=0;
     string str;
     for(row=grammerRow-1; row>=0; row--){
-            if(grammerMap[row][0] != "\t"){
-                firstMap[frow][fcol] = grammerMap[row][0];
-                fcol++;
-                refRow = row+1;
-                while(grammerMap[refRow][0] == "\t" && refRow <96){
-                    str = grammerMap[refRow][1];
-                    if(str[0]>=65 && str[0]<=90){
-                        firstMap[frow][fcol]=str;
-                        fcol++;
-                        for(nonRow=frow; nonRow>=0; nonRow--){
-                            if(str==firstMap[nonRow][0]){
-                                fcol--;
-                                while(firstMap[nonRow][nonCol]!="\0"){
-                                    firstMap[frow][fcol] = firstMap[nonRow][nonCol];
-                                    nonCol++;
-                                    fcol++;
-                                }
-                                nonCol=1;
+        if(grammerMap[row][0] != "\t"){
+            firstMap[frow][fcol] = grammerMap[row][0];
+            fcol++;
+            refRow = row+1;
+            while(grammerMap[refRow][0] == "\t" && refRow <96){
+                str = grammerMap[refRow][1];
+                if(str[0]>=65 && str[0]<=90){
+                    firstMap[frow][fcol]=str;
+                    fcol++;
+                    for(nonRow=frow; nonRow>=0; nonRow--){
+                        if(str==firstMap[nonRow][0]){
+                            fcol--;
+                            while(firstMap[nonRow][nonCol]!="\0"){
+                                firstMap[frow][fcol] = firstMap[nonRow][nonCol];
+                                nonCol++;
+                                fcol++;
                             }
+                            nonCol=1;
                         }
-                        refRow++;
                     }
-                    else{
-                        firstMap[frow][fcol] = grammerMap[refRow][1];
-                        fcol++;
-                        refRow++;
-                    }
+                    refRow++;
                 }
-                frow++;
-                fcol = 0;
+                else{
+                    firstMap[frow][fcol] = grammerMap[refRow][1];
+                    fcol++;
+                    refRow++;
+                }
             }
+            frow++;
+            fcol = 0;
+        }
     }
     firstRow=frow;
 }
@@ -248,7 +250,7 @@ void writeFile(){
         }
         fw << endl;
     }
-
+    
     fw << "\n\n\n";
     fw << "Follow" << endl;
     for(i=0; i<28; i++){
@@ -265,7 +267,7 @@ void writeFile(){
         }
         fw << endl;
     }
-
+    
     fw.close();
 }
 
@@ -415,8 +417,8 @@ void setFollow(int relativeRow){
                     refR2 = frow;
                 }
             }
-
-             while(finalFollowMap[refR2][refC2] != "\0"){
+            
+            while(finalFollowMap[refR2][refC2] != "\0"){
                 while(finalFollowMap[refR1][refC1] != "\0"){
                     if(finalFollowMap[refR1][refC1] == finalFollowMap[refR2][refC2]){
                         equalFlag=1;
@@ -463,11 +465,11 @@ int setLLTable(){
                     graCol++;
                 }
             }
-                llrow++;
-                llcol = 2;
-                graRow = 1;
-                graCol = 1;
-                col++;
+            llrow++;
+            llcol = 2;
+            graRow = 1;
+            graCol = 1;
+            col++;
         }
         col=1;
     }
@@ -475,7 +477,7 @@ int setLLTable(){
 }
 
 int is_in_First(string str, string sym){
-    int graRow, col;
+    int graRow;
     int tmp;
     int i, j=1;
     for(graRow=0; graRow<96; graRow++){
@@ -507,6 +509,7 @@ int is_in_First(string str, string sym){
         j=0;
         graRow++;
     }
+    return 0;
 }
 
 void writeLLTable(int llrow){
@@ -516,10 +519,10 @@ void writeLLTable(int llrow){
         cout << "Fail to open file" << endl;
         exit(1);
     }
-
-    int i, j;
+    
+    int i;
     fw << "S" << endl;
-
+    
     for(i=0; i<llrow; i++){
         fw << llTableMap[i][0] << "\t";
         if(llTableMap[i][0].size() < 17 && llTableMap[i][0].size() > 7){
@@ -529,14 +532,14 @@ void writeLLTable(int llrow){
             fw << "\t\t";
         }
         fw << llTableMap[i][1] << "\t\t";
-
+        
         for(int j=2; j<10; j++){
             fw << llTableMap[i][j] << " ";
         }
         fw << endl;
     }
-
-
+    
+    
     fw.close();
 }
 
@@ -544,8 +547,7 @@ void simple_Lexical(){
     char line[128];
     int col=0;
     int mainCnt=0;
-    int i;
-
+    
     memset(line, '\0', sizeof(128));
     fstream fr;
     fr.open("main.c",ios::in);
@@ -554,30 +556,30 @@ void simple_Lexical(){
         exit(1);
     }
     while(fr.getline(line,sizeof(line),'\n')){
-            while(line[col]!='\0'){
-                if(line[col]=='\t'){
-                    col++;
-                }
-                if(line[col]==' '){
-                    col++;
-                }
-                while(line[col]!='\0' && line[col]!=' ' && line[col]!='\t'){
-                    mainMap[mainCnt] += line[col];
-                    col++;
-                }
-                if(is_keyword(mainMap[mainCnt])==1){
-                }
-                else if(is_num(mainMap[mainCnt])==1){
-                    mainMap[mainCnt] = "num";
-                }
-                else if(is_id(mainMap[mainCnt])==1){
-                    mainMap[mainCnt] = "id";
-                }
+        while(line[col]!='\0'){
+            if(line[col]=='\t'){
                 col++;
-                mainCnt++;
             }
-            col=0;
-            memset(line, '\0', sizeof(line));
+            if(line[col]==' '){
+                col++;
+            }
+            while(line[col]!='\0' && line[col]!=' ' && line[col]!='\t'){
+                mainMap[mainCnt] += line[col];
+                col++;
+            }
+            if(is_keyword(mainMap[mainCnt])==1){
+            }
+            else if(is_num(mainMap[mainCnt])==1){
+                mainMap[mainCnt] = "num";
+            }
+            else if(is_id(mainMap[mainCnt])==1){
+                mainMap[mainCnt] = "id";
+            }
+            col++;
+            mainCnt++;
+        }
+        col=0;
+        memset(line, '\0', sizeof(line));
     }
     mainMap[mainCnt] = "$";
     fr.close();
@@ -617,7 +619,7 @@ void buildTree(int llrow){
     int mainCnt = 0;
     int llcnt = 2;
     int refR, index;
-    int lastIndex;
+    int lastIndex=0;
     int flag;
     string lastvalue;
     Tree tmpTree;
@@ -625,14 +627,14 @@ void buildTree(int llrow){
     tmpTree.index=1;
     tmpTree.value="S";
     trace.push(tmpTree);
-
+    
     fstream fw;
     fw.open("tree.txt",ios::out);
     if(!fw){
         cout << "Fail to open file" << endl;
         exit(1);
     }
-
+    
     tmpTree=trace.pop();
     while(tmpTree.value != "$"){
         index=tmpTree.index+1;
@@ -652,17 +654,12 @@ void buildTree(int llrow){
             for(refR=0; refR<llrow; refR++){
                 if(llTableMap[refR][0]==tmpTree.value && llTableMap[refR][1]==mainMap[mainCnt]){
                     break;
-                   flag=1;
                 }
-            }
-            if(flag=0){
-                cout << "Reject" << endl;
-                system("pause");
             }
             while(llTableMap[refR][llcnt] != "\0"){     //backward push
                 llcnt++;
             }
-
+            
             for(int i=llcnt-1; i>=2; i--){
                 newNode.index = index;
                 newNode.value = llTableMap[refR][i];
@@ -674,12 +671,12 @@ void buildTree(int llrow){
         lastvalue = tmpTree.value;
         tmpTree=trace.pop();
     }
-
+    
     for(int i=1; i<lastIndex; i++){
         fw << "  ";
     }
     fw << lastIndex << " " << lastvalue << endl;
-
+    
     if(tmpTree.value == "$" && mainMap[mainCnt] == "$"){
         cout << "Accept!" << endl;
     }
