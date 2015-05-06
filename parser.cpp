@@ -7,7 +7,6 @@
 #include <vector>
 
 using namespace std;
-void init();
 void readGrammer();
 void scanFirst();
 void reSetFirst();
@@ -24,16 +23,15 @@ void writeLLTable(int);
 void simple_Lexical();
 int is_keyword(string);
 int is_num(string);
-int is_id(string);
 void buildTree(int);
 
 struct Tree
 {
-	int index;
-	string value;
+	int index;       //the depth of the node
+	string value;    //the value of the node
 };
 
-class Stack
+class Stack         //the stack store type "Tree"
 {
 	private:
 		int top;
@@ -66,28 +64,26 @@ class Stack
 				item=*(array+top);
 				return item;
 			}
-			Tree a;
-			return a; //add for compile
+			Tree nop;
+			return nop; //never reach
 		}
 };
 
-string grammerMap[100][10]={};
-string firstMap[64][32]={};
-string finalFirstMap[64][32]={};
-string followRelative[64][2]={};
-string followBasic[32][32]={};
-string followMerge[32][32]={};
-string finalFollowMap[64][32]={};
-string llTableMap[256][10]={};
-string mainMap[128]={};
+string grammerMap[100][10]={};      //store grammar.txt into this array
+string firstMap[64][32]={};         //store basic first products include some nonterminal(Reverse order)
+string finalFirstMap[64][32]={};    //store first products of each nonterminal(In order)
+string followRelative[64][2]={};    //store relative between each nonterminal(if A Contains B than store followRelative[n][0]=A && followRelative[n][1]=B)
+string followBasic[32][32]={};      //store correct follow products after first scanning, and push all different nonterminal to the top of the same nonterminal
+string followMerge[32][32]={};      //according followBasic array, get the first of the same nonterminal and store into this array
+string finalFollowMap[64][32]={};   //store follow products of each nonterminal(according followRelative and followMerge array)
+string llTableMap[256][10]={};      //store llTable
+string mainMap[128]={};             //store the output of simple lexier(input:main.c)
 
 
-
-int grammerRow;
-int firstRow;
+int grammerRow;                     //the row of grammar
+int firstRow;                       //the number of nonterminal
 
 int main(){
-	init();
 	readGrammer();
 	scanFirst();
 	reSetFirst();
@@ -99,23 +95,7 @@ int main(){
 	writeLLTable(llrow);
 	simple_Lexical();
 	buildTree(llrow);
-
 	return 0;
-}
-
-void init(){
-	int i, j;
-	for(i=0; i<96; i++){
-		for(int j=0; j<10; j++){
-			grammerMap[i][j]="\0";
-		}
-	}
-	for(i=0; i<64; i++){
-		for(int j=0; j<32; j++){
-			firstMap[i][j]="\0";
-			finalFirstMap[i][j]="\0";
-		}
-	}
 }
 
 void readGrammer(){
@@ -123,7 +103,7 @@ void readGrammer(){
 	char line[128];
 	memset(line, '\0', sizeof(128));
 	fstream fr;
-	int row=0, col=0;
+	int col=0;
 	int gRow=0, gCol=0;
 	fr.open("grammer.txt",ios::in);
 	if(!fr){
@@ -227,55 +207,10 @@ void reSetFirst(){
 	}
 }
 
-void writeFile(){
-	fstream fw;
-	fw.open("set.txt",ios::out);
-	if(!fw){
-		cout << "Fail to open file" << endl;
-		exit(1);
-	}
-	int i, j;
-	fw << "First" << endl;
-	for(i=0; i<firstRow; i++){
-		fw << finalFirstMap[i][0] << "\t";
-		if(finalFirstMap[i][0].size() < 17 && finalFirstMap[i][0].size() > 7){
-			fw << "\t";
-		}
-		else if(finalFirstMap[i][0].size() <= 7){
-			fw << "\t\t";
-		}
-		fw << ": ";
-		for(int j=1; j<32; j++){
-			fw << finalFirstMap[i][j] << " ";
-		}
-		fw << endl;
-	}
-
-	fw << "\n\n\n";
-	fw << "Follow" << endl;
-	for(i=0; i<28; i++){
-		fw << finalFollowMap[i][0] << "\t";
-		if(finalFollowMap[i][0].size() < 17 && finalFollowMap[i][0].size() > 7){
-			fw << "\t";
-		}
-		else if(finalFollowMap[i][0].size() <= 7){
-			fw << "\t\t";
-		}
-		fw << ": ";
-		for(int j=1; j<32; j++){
-			fw << finalFollowMap[i][j] << " ";
-		}
-		fw << endl;
-	}
-
-	fw.close();
-}
-
 int scanFollow(){
 	int rcnt=0, bcnt=0;
 	int row, col;
 	int nonTerRow;
-	int i, flag=0;
 	for(nonTerRow=0; nonTerRow<firstRow; nonTerRow++){
 		for(row=0; row<95; row++){
 			for(col=0; col<10; col++){
@@ -339,7 +274,6 @@ int setFollowBasic(int row, int col, int cnt, int rcnt){
 }
 
 void mergeFollowBasic(int cnt){
-	int row, col;
 	int i;
 	int tmpRow=1, tmpCol=1;
 	int tmpCnt=1;
@@ -388,7 +322,7 @@ void setFollow(int relativeRow){
 	int rcnt, ccnt=1;
 	int i, j=1;
 	int frow;
-	int refR1, refR2;
+	int refR1=0, refR2=0;
 	int refC1=1, refC2=1;
 	int equalFlag=0;
 	for(rcnt=0; rcnt<firstRow; rcnt++){
@@ -436,6 +370,50 @@ void setFollow(int relativeRow){
 		}
 		else{/*do nothing*/}
 	}
+}
+
+void writeFile(){
+	fstream fw;
+	fw.open("set.txt",ios::out);
+	if(!fw){
+		cout << "Fail to open file" << endl;
+		exit(1);
+	}
+	int i;
+	fw << "First" << endl;
+	for(i=0; i<firstRow; i++){
+		fw << finalFirstMap[i][0] << "\t";
+		if(finalFirstMap[i][0].size() < 17 && finalFirstMap[i][0].size() > 7){
+			fw << "\t";
+		}
+		else if(finalFirstMap[i][0].size() <= 7){
+			fw << "\t\t";
+		}
+		fw << ": ";
+		for(int j=1; j<32; j++){
+			fw << finalFirstMap[i][j] << " ";
+		}
+		fw << endl;
+	}
+
+	fw << "\n\n\n";
+	fw << "Follow" << endl;
+	for(i=0; i<28; i++){
+		fw << finalFollowMap[i][0] << "\t";
+		if(finalFollowMap[i][0].size() < 17 && finalFollowMap[i][0].size() > 7){
+			fw << "\t";
+		}
+		else if(finalFollowMap[i][0].size() <= 7){
+			fw << "\t\t";
+		}
+		fw << ": ";
+		for(int j=1; j<32; j++){
+			fw << finalFollowMap[i][j] << " ";
+		}
+		fw << endl;
+	}
+
+	fw.close();
 }
 
 int setLLTable(){
@@ -509,7 +487,7 @@ int is_in_First(string str, string sym){
 		j=0;
 		graRow++;
 	}
-	return 0;
+	return 0;   //never reach
 }
 
 void writeLLTable(int llrow){
@@ -572,8 +550,10 @@ void simple_Lexical(){
 			else if(is_num(mainMap[mainCnt])==1){
 				mainMap[mainCnt] = "num";
 			}
-			else if(is_id(mainMap[mainCnt])==1){
+			else{
+				mainMap[mainCnt+1] = mainMap[mainCnt];
 				mainMap[mainCnt] = "id";
+				mainCnt++;
 			}
 			col++;
 			mainCnt++;
@@ -605,23 +585,11 @@ int is_num(string str){
 	}
 }
 
-int is_id(string str){
-	if((str[0]>=65 && str[0]<=90) || (str[0]>=97 && str[0]<=122)){
-		return 1;
-	}
-	else{
-		return 0;
-	}
-}
-
 void buildTree(int llrow){
 	Stack trace(128);
 	int mainCnt = 0;
 	int llcnt = 2;
 	int refR, index;
-	int lastIndex=0;
-	int flag;
-	string lastvalue;
 	Tree tmpTree;
 	Tree newNode;
 	tmpTree.index=1;
@@ -644,9 +612,16 @@ void buildTree(int llrow){
 			}
 			fw << tmpTree.index << " " << tmpTree.value << endl;
 			mainCnt++;
+
+			if(mainMap[mainCnt-1]=="id"){
+				for(int i=1; i<tmpTree.index+1; i++){
+					fw << "  ";
+				}
+				fw << tmpTree.index+1 << " " << mainMap[mainCnt] << endl;
+				mainCnt++;
+			}
 		}
 		else{
-			flag=0;
 			for(int i=1; i<tmpTree.index; i++){
 				fw << "  ";
 			}
@@ -667,15 +642,8 @@ void buildTree(int llrow){
 			}
 			llcnt = 2;
 		}
-		lastIndex = index;
-		lastvalue = tmpTree.value;
 		tmpTree=trace.pop();
 	}
-
-	for(int i=1; i<lastIndex; i++){
-		fw << "  ";
-	}
-	fw << lastIndex << " " << lastvalue << endl;
 
 	if(tmpTree.value == "$" && mainMap[mainCnt] == "$"){
 		cout << "Accept!" << endl;
