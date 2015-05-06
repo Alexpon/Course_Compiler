@@ -5,7 +5,8 @@
 #####Laguage： C++
 #####Environment： Code::Blocks / Macbook terminal
 #####Input: 
-	* grammer.txt
+	* grammar.txt
+	* main.c
 #####Output: 
 	* set.txt
 	* LLtable.txt

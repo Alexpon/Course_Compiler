@@ -105,7 +105,7 @@ void readGrammer(){
 	fstream fr;
 	int col=0;
 	int gRow=0, gCol=0;
-	fr.open("grammer.txt",ios::in);
+	fr.open("grammar.txt",ios::in);
 	if(!fr){
 		cout << "Fail to open file" << endl;
 		exit(1);
