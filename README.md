@@ -162,10 +162,34 @@
 			並且判斷字串長度適當的加上一些tab讓格式更易讀
 
 		11. int setLLTable()
-			to be continue...
-
+			由於LLTable就是要找出每個nonterminal遇到自己的First時所要做相對應的轉換
+			所以我就直接scan finalFirstMap可以直接找出每個相對應的product
+			但要注意這個terminal是出自於grammar裡的哪一項
+			下面用例子來解釋，假設：
+				First(B) = { : ; [ }
+				First(C) = { && || }
+				有一Grammar: A->BX | C
+				所以知道First(A) = { : ; [ && || }
+				當我在掃finalFirstMap掃到A時
+				我會判斷當A遇到:應該要轉換成BX還是C
+				這時就要回去grammerMap裡check來達到正確的轉換
+				這邊利用呼叫下面的funcrtion(is_in_First)可以知道是出自於哪一個grammar
+			除了上面說的之外，還有規則需要被考慮(遇到epsilon)
+			根據定義，遇到epsilon時，需要將nonterminal遇到自己的Follow都produce出epsilon
+			這部分的寫法沒有上面複雜，只要判斷到將值存進對應位置的array就行
+			經過所有的nonterminal掃一輪後，所有的LLTable就存進了llTablpMap
+			
 		12. int is_in_First(string, string)
-			to be continue...
+			這個function就是用來找symble是出自於grammar裡的哪一條
+			這個function吃了兩個參數一個是當前的nonterminal另一個是他所碰到的terminal
+			一開始先利用傳入的nonterminal找出他是在grammerMap裡的哪一列，這就是起始點
+			從這個起始點往下找直到遇到下一個nonterminal停止(grammer[n][0]!="\t")
+			當傳入的symble比對到相同的terminal就太好了，因為這行就是解並回傳當前的row
+			當然沒這麼好的事，通常都是遇到nonterminal
+			所以就要回去finalFirstMap裡找，同樣的先找row就不詳述了
+			直到比對到相同的symble就回傳當前的row數
+			一個正確的grammar在這邊都一定會回傳一個具有參考價值的row
+			如果回傳的是不具參考價值的row就表示這個grammar不是個正確的grammar
 
 		13. void writeLLTable(int)
 			將上面辛辛苦苦建好的llTableMap array輸出到LLTable.txt中
@@ -174,7 +198,7 @@
 		14. void simple_Lexical()
 			十分簡易版的Lexier
 			讀取main.c檔，利用空白切出每個string
-			把非保留字或符號判斷成id
+			把非保留字或符號判斷成id(原本的variable名稱也會存進mainMap裡)
 			數字判斷成num
 			並將結果一一存到mainMap裡面
 
@@ -188,9 +212,30 @@
 			判斷如果是數字則return 1 反之 return 0
 
 		17. void buildTree(int)
-			to be continue...
+			經過前面一連串的處理，終於來到了最後一步
+			在有了LLTableMap和mainMap我們可以來開始種樹了
+			先說說這棵output的樹長得怎麼樣吧
+			在每個像前面都會有一個數字，這個數字就代表這個node得depth
+			而為了易讀性，我在數字前加上了相對應的縮排，所以同樣depth的node會在同一列上的
+			在這裡面我利用一個type為structure Tree的stack，這個stack pop和push都必須是structure Tree
+			為什麼要用structure呢？因為要存兩種資料(depth數 & string)
+			一開始我就先將開始符號(S)及depth(1) assign進Tree type的variable並push進stack
+			進到while loop裡就是不斷的push pop值到遇到結束符號($)為止
+			在while loop裡分為兩個部分Match跟Non-match
+			Match:
+				印出剛剛pop出的depth及string，並將mainMap指到下個位置
+				這部分蠻直觀的，只是要注意遇到id時要多印出id的name，且mainMap也要多向右一步
+			Non-Match:
+				其實也不難，只是去llTableMap找出要轉換的row
+				llTableMap從上掃到下，當row 0及row 1都相等就找到參考的row
+				再利用這行row做需要的變換並push進stack裡面
+				這裏有一個需要注意的地方
+				由於stack是FILO，所以我們必須從後往前push進stack裡面
+			出了while後就可以看這個main.c有沒有被accept
+			如果stack最後pop出的value以及mainMap裡的都是結束符號$
+			就代表成功，印出Accept，反之Reject
 
-歡迎享用及討論
+歡迎享用及討論<br>
 記得標明出處來源並將code open:)
 
 ##Lexier:
@@ -231,5 +276,3 @@
 
 	8. is_number(FILE *)
 		判斷是否為number或是error並將結果輸出
-
-
