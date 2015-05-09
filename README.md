@@ -175,11 +175,19 @@
 				這時就要回去grammerMap裡check來達到正確的轉換
 				這邊利用呼叫下面的funcrtion(is_in_First)可以知道是出自於哪一個grammar
 			除了上面說的之外，還有規則需要被考慮(遇到epsilon)
-			根據定義，遇到epsilon時，需要將nonterminal遇到自己的Follow都produce出epsilon
-			這部分的寫法沒有上面複雜，只要判斷到將值存進對應位置的array就行
+			根據定義，遇到epsilon時
+			需要呼叫is_epsilon function來判斷這個epsilon是由哪個production產生
+			這部分的找法跟上面插不多，但稍微簡單些
 			經過所有的nonterminal掃一輪後，所有的LLTable就存進了llTablpMap
 			
-		12. int is_in_First(string, string)
+		12. int is_epsilon(string, string)
+			這個function就是用來找symble是出自於grammar裡的哪一條
+			這個function吃了兩個參數一個是當前的nonterminal另一個是epsilon
+			在這funtion裡如果能找到production剛好就是epsilon就直接回傳row
+			如果無法直接找到，就找是由哪一個production derived出來的
+			如果還是找不到，回傳0代表grammar是non-regular
+		
+		13. int is_in_First(string, string)
 			這個function就是用來找symble是出自於grammar裡的哪一條
 			這個function吃了兩個參數一個是當前的nonterminal另一個是他所碰到的terminal
 			一開始先利用傳入的nonterminal找出他是在grammerMap裡的哪一列，這就是起始點
