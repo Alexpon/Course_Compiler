@@ -199,27 +199,27 @@
 			一個正確的grammar在這邊都一定會回傳一個具有參考價值的row
 			如果回傳的是不具參考價值的row就表示這個grammar不是個正確的grammar
 
-		13. void writeLLTable(int)
+		14. void writeLLTable(int)
 			將上面辛辛苦苦建好的llTableMap array輸出到LLTable.txt中
 			並判斷一些字串長度加上適當的tab讓檔案更易讀
 
-		14. void simple_Lexical()
+		15. void simple_Lexical()
 			十分簡易版的Lexier
 			讀取main.c檔，利用空白切出每個string
 			把非保留字或符號判斷成id(原本的variable名稱也會存進mainMap裡)
 			數字判斷成num
 			並將結果一一存到mainMap裡面
 
-		15. int is_keyword(string)
+		16. int is_keyword(string)
 			在simple_Lexical function裡面會呼叫
 			主要判斷所擷取到的string是不是保留字或符號
 			如果是保留字或符號return 1 反之 return 0
 
-		16. int is_num(string)
+		17. int is_num(string)
 			在simple_Lexical function裡面會呼叫
 			判斷如果是數字則return 1 反之 return 0
 
-		17. void buildTree(int)
+		18. void buildTree(int)
 			經過前面一連串的處理，終於來到了最後一步
 			在有了LLTableMap和mainMap我們可以來開始種樹了
 			先說說這棵output的樹長得怎麼樣吧
