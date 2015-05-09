@@ -7,7 +7,7 @@ Program			int		DeclList
 Program			char		DeclList        
 Program			double		DeclList        
 Program			float		DeclList        
-Program			$		epsilon        
+Program			$		DeclList        
 DeclList		int		DeclList' DeclList       
 DeclList		char		DeclList' DeclList       
 DeclList		double		DeclList' DeclList       
@@ -120,10 +120,10 @@ ExprIdTail		>		Expr'
 ExprIdTail		>=		Expr'        
 ExprIdTail		&&		Expr'        
 ExprIdTail		||		Expr'        
-ExprIdTail		;		epsilon        
-ExprIdTail		)		epsilon        
-ExprIdTail		]		epsilon        
-ExprIdTail		,		epsilon        
+ExprIdTail		;		Expr'        
+ExprIdTail		)		Expr'        
+ExprIdTail		]		Expr'        
+ExprIdTail		,		Expr'        
 ExprIdTail		(		( ExprList ) Expr'     
 ExprIdTail		[		[ Expr ] ExprArrayTail     
 ExprIdTail		=		= Expr       
@@ -139,10 +139,10 @@ ExprArrayTail		>		Expr'
 ExprArrayTail		>=		Expr'        
 ExprArrayTail		&&		Expr'        
 ExprArrayTail		||		Expr'        
-ExprArrayTail		;		epsilon        
-ExprArrayTail		)		epsilon        
-ExprArrayTail		]		epsilon        
-ExprArrayTail		,		epsilon        
+ExprArrayTail		;		Expr'        
+ExprArrayTail		)		Expr'        
+ExprArrayTail		]		Expr'        
+ExprArrayTail		,		Expr'        
 ExprArrayTail		=		= Expr       
 Expr'			+		BinOp Expr       
 Expr'			-		BinOp Expr       
