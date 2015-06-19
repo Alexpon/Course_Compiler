@@ -23,14 +23,17 @@ void setFollow(int);
 int setLLTable();
 int is_in_First(string, string);
 int is_epsilon(string, string);
-void writeLLTable(int);
 void simple_Lexical();
 int is_keyword(string);
 int is_num(string);
 void buildTree(int);
+void llvm();
+string itos(int);
 string findType(int, int, string, string);
 
-string mainMap[64][64]={};
+
+
+string mainMap[1024]={};
 string scopeMap[128][5]={};
 string assignTable[64][3]={};
 int scopeRow;
@@ -43,13 +46,12 @@ string followBasic[32][32]={};      //store correct follow products after first 
 string followMerge[32][32]={};      //according followBasic array, get the first of the same nonterminal and store into this array
 string finalFollowMap[64][32]={};   //store follow products of each nonterminal(according followRelative and followMerge array)
 string llTableMap[256][10]={};      //store llTable
-string tmainMap[1024]={};             //store the output of simple lexier(input:main.c)
-
+string treeMap[1024][3]={};
 
 int grammerRow;                     //the row of grammar
 int firstRow;                       //the number of nonterminal
-
-
+int mainCnt;
+int treeRow;
 
 
 struct Tree
@@ -175,12 +177,10 @@ int main(){
     setFollow(rcnt);
     setFollow(rcnt); //second time to make the table more correctly
     int llrow = setLLTable();
-    writeLLTable(llrow);
     simple_Lexical();
     buildTree(llrow);
-    readFile();
     findScope();
-    //typeCheck();
+    llvm();
 
     for(int i=0; i<scopeRow; i++){
         for(int j=0; j<5; j++){
@@ -196,6 +196,10 @@ int main(){
             cout << assignTable[i][j] << "\t";
         }
         cout << endl;
+    }
+    int i;
+    for(i=0; i<100; i++){
+        cout << treeMap[i][0] << " " << treeMap[i][1] << endl;
     }
 
 
@@ -595,37 +599,6 @@ int is_in_First(string str, string sym){
     return 0;   //non-regular grammar
 }
 
-void writeLLTable(int llrow){
-    fstream fw;
-    fw.open("LLtable.txt",ios::out);
-    if(!fw){
-        cout << "Fail to open file" << endl;
-        exit(1);
-    }
-
-    int i;
-    fw << "S" << endl;
-
-    for(i=0; i<llrow; i++){
-        fw << llTableMap[i][0] << "\t";
-        if(llTableMap[i][0].size() < 17 && llTableMap[i][0].size() > 7){
-            fw << "\t";
-        }
-        else if(llTableMap[i][0].size() <= 7){
-            fw << "\t\t";
-        }
-        fw << llTableMap[i][1] << "\t\t";
-
-        for(int j=2; j<10; j++){
-            fw << llTableMap[i][j] << " ";
-        }
-        fw << endl;
-    }
-
-
-    fw.close();
-}
-
 void simple_Lexical(){
     char line[128];
     int col=0;
@@ -644,19 +617,19 @@ void simple_Lexical(){
                 col++;
             }
             while(line[col]!='\0' && line[col]!=' ' && line[col]!='\t'){
-                tmainMap[mainCnt] += line[col];
+                mainMap[mainCnt] += line[col];
                 col++;
             }
-            if(is_keyword(tmainMap[mainCnt])==1){
+            if(is_keyword(mainMap[mainCnt])==1){
             }
-            else if(is_num(tmainMap[mainCnt])==1){
-                tmainMap[mainCnt+1] = tmainMap[mainCnt];
-                tmainMap[mainCnt] = "num";
+            else if(is_num(mainMap[mainCnt])==1){
+                mainMap[mainCnt+1] = mainMap[mainCnt];
+                mainMap[mainCnt] = "num";
                 mainCnt++;
             }
             else{
-                tmainMap[mainCnt+1] = tmainMap[mainCnt];
-                tmainMap[mainCnt] = "id";
+                mainMap[mainCnt+1] = mainMap[mainCnt];
+                mainMap[mainCnt] = "id";
                 mainCnt++;
             }
             col++;
@@ -665,7 +638,7 @@ void simple_Lexical(){
         col=0;
         memset(line, '\0', sizeof(line));
     }
-    tmainMap[mainCnt] = "$";
+    mainMap[mainCnt] = "$";
     fr.close();
 }
 
@@ -689,56 +662,49 @@ int is_num(string str){
     }
 }
 
+/**************************/
+
 void buildTree(int llrow){
     StackT trace(128);
-    int mainCnt = 0;
+    mainCnt = 0;
     int llcnt = 2;
     int refR, index;
+    treeRow=0;
     Tree tmpTree;
     Tree newNode;
     tmpTree.index=1;
     tmpTree.value="S";
     trace.push(tmpTree);
 
-    fstream fw;
-    fw.open("tree.txt",ios::out);
-    if(!fw){
-        cout << "Fail to open file" << endl;
-        exit(1);
-    }
-
     tmpTree=trace.pop();
     while(tmpTree.value != "$"){
         index=tmpTree.index+1;
-        if(tmpTree.value == tmainMap[mainCnt]){
-            for(int i=1; i<tmpTree.index; i++){
-                fw << "  ";
-            }
-            fw << tmpTree.index << " " << tmpTree.value << endl;
+        if(tmpTree.value == mainMap[mainCnt]){
+            treeMap[treeRow][0] = itos(tmpTree.index);
+            treeMap[treeRow][1] = tmpTree.value;
+            treeRow++;
             mainCnt++;
 
-            if(tmainMap[mainCnt-1]=="id"){
-                for(int i=1; i<tmpTree.index+1; i++){
-                    fw << "  ";
-                }
-                fw << tmpTree.index+1 << " " << tmainMap[mainCnt] << endl;
+            if(mainMap[mainCnt-1]=="id"){
+                treeMap[treeRow][0] = itos(tmpTree.index+1);
+                treeMap[treeRow][1] = mainMap[mainCnt];
+                treeRow++;
                 mainCnt++;
             }
-            if(tmainMap[mainCnt-1]=="num"){
-                for(int i=1; i<tmpTree.index+1; i++){
-                    fw << "  ";
-                }
-                fw << tmpTree.index+1 << " " << tmainMap[mainCnt] << endl;
+            if(mainMap[mainCnt-1]=="num"){
+                treeMap[treeRow][0] = itos(tmpTree.index+1);
+                treeMap[treeRow][1] = mainMap[mainCnt];
+                treeRow++;
                 mainCnt++;
             }
         }
         else{
-            for(int i=1; i<tmpTree.index; i++){
-                fw << "  ";
-            }
-            fw << tmpTree.index << " " << tmpTree.value << endl;
+            treeMap[treeRow][0] = itos(tmpTree.index);
+            treeMap[treeRow][1] = tmpTree.value;
+            treeRow++;
+
             for(refR=0; refR<llrow; refR++){
-                if(llTableMap[refR][0]==tmpTree.value && llTableMap[refR][1]==tmainMap[mainCnt]){
+                if(llTableMap[refR][0]==tmpTree.value && llTableMap[refR][1]==mainMap[mainCnt]){
                     break;
                 }
             }
@@ -756,55 +722,15 @@ void buildTree(int llrow){
         tmpTree=trace.pop();
     }
 
-    if(tmpTree.value == "$" && tmainMap[mainCnt] == "$"){
-        fw << "    2 $" << endl;
+    if(tmpTree.value == "$" && mainMap[mainCnt] == "$"){
+        treeMap[treeRow][0] = "2";
+        treeMap[treeRow][1] = "$";
         cout << "Accept!" << endl;
     }
     else{
         cout << "Reject!" << endl;
     }
 }
-
-void readFile(){
-    int mainRow = 0;
-    int mainCol = 0;
-	char line[128];
-	memset(line, '\0', sizeof(char) * 128);
-	fstream fr;
-	int col=0;
-	fr.open("main.c",ios::in);
-	if(!fr){
-		cout << "Fail to open file" << endl;
-		exit(1);
-	}
-
-	while(fr.getline(line,sizeof(line),'\n')){
-		while(line[col]!='\0'){
-			if(line[col]==' '){
-				col++;
-			}
-            else if(line[col]=='\t'){
-				mainMap[mainRow][mainCol] = "\t";
-				mainCol++;
-				col++;
-			}
-			else{
-                while(line[col]!='\0' && line[col]!=' ' && line[col]!='\t'){
-                    mainMap[mainRow][mainCol] += line[col];
-                    col++;
-                }
-                mainCol++;
-			}
-		}
-		mainRow++;
-		mainCol = 0;
-		col=0;
-		memset(line, '\0', sizeof(char) * 128);
-	}
-	fr.close();
-}
-
-
 
 void findScope(){
     int i, j, k;
@@ -816,17 +742,16 @@ void findScope(){
     Stack scStack(128);
     Scope scope;
 
-    for(i=0; i<64; i++){
-        for(j=0; j<64; j++){
-            if(mainMap[i][j]=="{"){
+    for(i=0; i<mainCnt; i++){
+           if(mainMap[i]=="{"){
                 scope.count = scopeCounter;
                 scope.flag = 0;
                 scStack.push(scope);
             }
-            else if(mainMap[i][j]=="}"){
+            else if(mainMap[i]=="}"){
                 scStack.pop();
             }
-            else if(mainMap[i][j]=="int" || mainMap[i][j]=="double" || mainMap[i][j]=="void"){
+            else if(mainMap[i]=="int" || mainMap[i]=="double" || mainMap[i]=="void"){
                 if(scStack.isEmpty()){
                     scopeMap[scopeRow][0] = "0";
                 }
@@ -836,22 +761,17 @@ void findScope(){
                         scStack.setCount(scopeCounter);
                         scStack.setFlag();
                     }
-
-                    stringstream ss;
-                    ss << scStack.getCnt();
-                    string s;
-                    ss >> s;
-                    scopeMap[scopeRow][0] = s;
+                    scopeMap[scopeRow][0] = itos(scStack.getCnt());
                 }
-                scopeMap[scopeRow][1] = mainMap[i][j+1];
-                scopeMap[scopeRow][2] = mainMap[i][j];
-                if(mainMap[i][j+2]=="["){
+                scopeMap[scopeRow][1] = mainMap[i+2];
+                scopeMap[scopeRow][2] = mainMap[i];
+                if(mainMap[i+3]=="["){
                     scopeMap[scopeRow][3] = "true";
                 }
                 else{
                     scopeMap[scopeRow][3] = "false";
                 }
-                if(mainMap[i][j+2]=="("){
+                if(mainMap[i+3]=="("){
                     scopeMap[scopeRow][4] = "true";
                 }
                 else{
@@ -859,30 +779,28 @@ void findScope(){
                 }
                 scopeRow++;
             }
-            else if(mainMap[i][j] == "==" || mainMap[i][j] == "!=" || mainMap[i][j] == ">=" ||
-                    mainMap[i][j] == "<=" || mainMap[i][j] == ">" || mainMap[i][j] == "<" || mainMap[i][j] == "="){
+            else if(mainMap[i] == "==" || mainMap[i] == "!=" || mainMap[i] == ">=" ||
+                    mainMap[i] == "<=" || mainMap[i] == ">" || mainMap[i] == "<" || mainMap[i] == "="){
                     int tmp=1;
                     int flag=0;
-                    if(mainMap[i][j-1]=="]"){
-                        targetID = mainMap[i][j-4];
+                    if(mainMap[i-1]=="]"){
+                        targetID = mainMap[i-5]+mainMap[i-4]+mainMap[i-2]+mainMap[i-1];
                     }
                     else{
-                        targetID = mainMap[i][j-1];
+                        targetID = mainMap[i-1];
                     }
                     int equal = 0;
-                    if(mainMap[i][j] == "="){
+                    if(mainMap[i] == "="&&mainMap[i+3]==";"){
                         equal = 1;
                     }
                     numType = "int";
-                    while(mainMap[i][j+tmp] != ";" && mainMap[i][j+tmp] != "{" && mainMap[i][j+tmp] != "\0"){
-                        if(flag==0){
-                            while(mainMap[i][j+tmp]=="+" || mainMap[i][j+tmp]=="-" || mainMap[i][j+tmp]=="*" || mainMap[i][j+tmp]=="/" || mainMap[i][j+tmp]=="(" || mainMap[i][j+tmp]==")"){
+                    while(mainMap[i+tmp] != ";" && mainMap[i+tmp] != "{" && mainMap[i+tmp] != "\0"){
+                        if(mainMap[i+tmp]=="id" || mainMap[i+tmp]=="num"){
                                 tmp++;
-                            }
-                            var = mainMap[i][j+tmp];
-                            flag = 1;
                         }
-                        inva = mainMap[i][j+tmp];
+                        var = mainMap[i+tmp];
+
+                        inva = mainMap[i+tmp];
                         rightType = findType(equal, scopeCounter, targetID, inva);
                         if(rightType=="double"){
                             numType = "double";
@@ -904,7 +822,6 @@ void findScope(){
                         cout << "waring (scope " << scp << ") : " << targetID << " " << targetType << ",\t" << var << "\t" << numType << endl;
                     }
             }
-        }
     }
     printToFile();
 }
@@ -932,14 +849,10 @@ string findType(int eq, int scp, string tar, string var){
         }
     }
     else{
-        stringstream ss;
-        ss << scp;
-        string s;
-        ss >> s;
         for(k=0; k<var.length(); k++){
             if(var[k]=='.'){
                 if(eq){
-                    assignTable[assignRow][0] = s;
+                    assignTable[assignRow][0] = itos(scp);
                     assignTable[assignRow][1] = tar;
                     assignTable[assignRow][2] = var;
                     assignRow++;
@@ -948,7 +861,7 @@ string findType(int eq, int scp, string tar, string var){
             }
         }
         if(eq){
-            assignTable[assignRow][0] = s;
+            assignTable[assignRow][0] = itos(scp);
             assignTable[assignRow][1] = tar;
             assignTable[assignRow][2] = var;
             assignRow++;
@@ -977,3 +890,121 @@ void printToFile(){
     }
 }
 
+void llvm(){
+    int i;
+    int globle = 1;
+    int paraCnt = 1;
+
+    int isArray=0;
+    int isNumAssign=0;
+
+    string funcIndex = "0";
+    string funcName;
+    string funcType;
+
+    string declareName;
+    string declareType;
+
+    string arraySize;
+
+    cout << "@.str = private constant[4 x i8] c\"%d\\0A\\00\"" << endl;
+    cout << "declare i32 @printf(i8*, ...)" << endl;
+    for(i=0; i<treeRow; i++){
+        if(treeMap[i][1]=="Type" && treeMap[i+5][1]=="FunDecl"){
+            //¶ifunction
+            globle = 0;
+            funcIndex = treeMap[i][0];
+            funcType = treeMap[i+1][1];
+            funcName = treeMap[i+3][1];
+            if(funcType=="int"){
+                cout << "define i32 @" << funcName << "() #0 {" << endl;
+            }
+            else if(funcType=="double"){
+                cout << "define double @" << funcName << "() #0 {" << endl;
+            }
+            else{
+                cout << "err in into-func" << endl;
+            }
+            i=i+5;
+        }
+        else if(treeMap[i][0]==funcIndex){
+            //¥Xfunction
+            globle = 1;
+            funcIndex = "0";
+            cout << "}" << endl;
+        }
+        else if(treeMap[i][1]=="Type" && treeMap[i+5][1]!="FunDecl"){
+            //«Å§i
+            declareType=treeMap[i+1][1];
+            declareName=treeMap[i+3][1];
+            if(treeMap[i+5][1]=="["){
+                isArray = 1;
+                arraySize = treeMap[i+7][1];
+                i = i+7;
+            }
+            else{
+                isArray = 0;
+                i = i+5;
+            }
+
+            if(globle){
+                if(isArray){
+                    if(declareType=="int"){
+                        cout << "@" + declareName + "= global [" + arraySize + " x i32 0]" << endl;
+                    }
+                    else{
+                        cout << "@" + declareName + "= global [" + arraySize + " x double 0]" << endl;
+                    }
+                }
+                else{
+                    if(declareType=="int"){
+                        cout << "@" + declareName + "= global i32 0" << endl;
+                    }
+                    else{
+                        cout << "@" + declareName + "= global double 0" << endl;
+                    }
+                }
+            }
+            else{
+                if(isArray){
+                    if(declareType=="int"){
+                        cout << "%" + declareName + "= alloca [" + arraySize + " x i32]" << endl;
+                    }
+                    else{
+                        cout << "%" + declareName + "= alloca [" + arraySize + " x double]" << endl;
+                    }
+                }
+                else{
+                    if(declareType=="int"){
+                        cout << "%" + declareName + "= alloca i32" << endl;
+                    }
+                    else{
+                        cout << "%" + declareName + "= alloca double" << endl;
+                    }
+                }
+            }
+        }
+        else if(treeMap[i][1]=="="){
+            //assign
+
+        }
+        else if(treeMap[i][1]=="print"){
+
+        }
+        else if(treeMap[i][1]=="if"){
+
+        }
+        else if(treeMap[i][1]=="while"){
+
+        }
+
+    }
+}
+
+string itos(int in){
+        stringstream tmp;
+        tmp << in;
+        string str;
+        tmp >> str;
+        return str;
+}
