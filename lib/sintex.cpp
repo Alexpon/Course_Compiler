@@ -199,7 +199,7 @@ int main(){
     }
     int i;
     for(i=0; i<100; i++){
-        cout << treeMap[i][0] << " " << treeMap[i][1] << endl;
+        cout << treeMap[i][0] << " " << treeMap[i][1] << " " << treeMap[i][2] << endl;
     }
 
 
@@ -669,6 +669,10 @@ void buildTree(int llrow){
     mainCnt = 0;
     int llcnt = 2;
     int refR, index;
+    int scpCnt=0;
+    Stack scStack(128);
+    Scope scope;
+
     treeRow=0;
     Tree tmpTree;
     Tree newNode;
@@ -680,6 +684,35 @@ void buildTree(int llrow){
     while(tmpTree.value != "$"){
         index=tmpTree.index+1;
         if(tmpTree.value == mainMap[mainCnt]){
+
+            if(tmpTree.value=="{"){
+                scope.count = scpCnt;
+                scope.flag = 0;
+                scStack.push(scope);
+            }
+            else if(tmpTree.value=="}"){
+                scStack.pop();
+            }
+            else if(tmpTree.value=="int" || tmpTree.value=="double"){
+                if(scStack.isEmpty()){
+                    treeMap[treeRow][2] = "0";
+                }
+                else{
+                    if(scStack.getFlag()==0){
+                        scpCnt++;
+                        scStack.setCount(scpCnt);
+                        scStack.setFlag();
+                    }
+                    treeMap[treeRow][2] = itos(scStack.getCnt());
+                }
+            }
+            else{
+                if(scStack.isEmpty())
+                    treeMap[treeRow][2] = "0";
+                else
+                    treeMap[treeRow][2] = itos(scStack.getCnt());
+            }
+
             treeMap[treeRow][0] = itos(tmpTree.index);
             treeMap[treeRow][1] = tmpTree.value;
             treeRow++;
@@ -688,17 +721,26 @@ void buildTree(int llrow){
             if(mainMap[mainCnt-1]=="id"){
                 treeMap[treeRow][0] = itos(tmpTree.index+1);
                 treeMap[treeRow][1] = mainMap[mainCnt];
+                if(scStack.isEmpty())
+                    treeMap[treeRow][2] = "0";
+                else
+                    treeMap[treeRow][2] = itos(scStack.getCnt());
                 treeRow++;
                 mainCnt++;
             }
             if(mainMap[mainCnt-1]=="num"){
                 treeMap[treeRow][0] = itos(tmpTree.index+1);
                 treeMap[treeRow][1] = mainMap[mainCnt];
+                if(scStack.isEmpty())
+                    treeMap[treeRow][2] = "0";
+                else
+                    treeMap[treeRow][2] = itos(scStack.getCnt());
                 treeRow++;
                 mainCnt++;
             }
         }
         else{
+
             treeMap[treeRow][0] = itos(tmpTree.index);
             treeMap[treeRow][1] = tmpTree.value;
             treeRow++;
