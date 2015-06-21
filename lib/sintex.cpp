@@ -28,7 +28,8 @@ int is_keyword(string);
 int is_num(string);
 void buildTree(int);
 void llvm();
-string getTyep(int, int);
+string getType(int, int);
+string getSize(int, int);
 string itos(int);
 string findType(int, int, string, string);
 
@@ -206,11 +207,11 @@ int main(){
             cout << assignTable[i][j] << "\t";
         }
         cout << endl;
-    }*/
+    }
     int i;
     for(i=300; i<400; i++){
         cout << treeMap[i][0] << " " << treeMap[i][1] << " " << treeMap[i][2] << endl;
-    }
+    }*/
 
 
 }
@@ -1027,7 +1028,6 @@ void llvm(){
     cout << "declare i32 @printf(i8*, ...)" << endl;
     for(i=0; i<treeRow; i++){
         if(treeMap[i][1]=="Type" && treeMap[i+5][1]=="FunDecl"){
-            //¶ifunction
             globle = 0;
             funcIndex = treeMap[i][0];
             funcType = treeMap[i+1][1];
@@ -1044,7 +1044,6 @@ void llvm(){
             i=i+5;
         }
         else if(treeMap[i][0]==funcIndex){
-            //¥Xfunction
             globle = 1;
             funcIndex = "0";
             cout << "}" << endl;
@@ -1111,18 +1110,8 @@ void llvm(){
                         string size;
                         assignTrg = treeMap[i-10][1] + treeMap[i-8][1] + treeMap[i-5][1] + treeMap[i-2][1];
                         assignVal = treeMap[i+3][1];
-                        for(j=scopeRow; j>0; j--){
-                            if(scopeMap[j][0]<=treeMap[i][2] && scopeMap[j][1]==treeMap[i-10][1]){
-                                size = scopeMap[j][5];
-                                if(scopeMap[j][2]=="int"){
-                                    type = "i32";
-                                }
-                                else{
-                                    type = "double";
-                                }
-                                break;
-                            }
-                        }
+                        type = getType(i, i-10);
+                        size = getSize(i, i-10);
                         cout << "%" << paraCnt << " = getelementptr inbounds [" + size + " x " + type + "]* %" + treeMap[i-10][1] + ", i32 0, i64 " + treeMap[i-5][1] << endl;
                         cout << "store " + type + " " + assignVal + ", " + type + "* %" << paraCnt << endl;
                         paraList[paraCnt][0] = "%"+itos(paraCnt);
@@ -1136,17 +1125,7 @@ void llvm(){
                         assignTrg = treeMap[i-2][1];
                         assignVal = treeMap[i+3][1];
                         int j;
-                        for(j=scopeRow; j>0; j--){
-                            if(scopeMap[j][0]<=treeMap[i][2] && scopeMap[j][1]==treeMap[i-2][1]){
-                                if(scopeMap[j][2]=="int"){
-                                    type = "i32";
-                                }
-                                else{
-                                    type = "double";
-                                }
-                                break;
-                            }
-                        }
+                        type = getType(i, i-2);
                         if(scopeMap[j][0]=="0"){
                             cout << "store " + type + " " + assignVal + ", " + type + "* @" + assignTrg << endl;
                             cout << "%" << paraCnt << " = load " + type + "* @" + assignTrg << endl;
@@ -1203,17 +1182,7 @@ void llvm(){
 
                         }
 
-                        for(j=scopeRow; j>0; j--){
-                            if(scopeMap[j][0]<=treeMap[i][2] && scopeMap[j][1]==treeMap[i-2][1]){
-                                if(scopeMap[j][2]=="int"){
-                                    type = "i32";
-                                }
-                                else{
-                                    type = "double";
-                                }
-                                break;
-                            }
-                        }
+                        type = getType(i, i-2);
                         if(scopeMap[j][0]=="0"){
                             cout << "store " + type + " %" << par << ", " + type + "* @" + assignTrg << endl;
                             cout << "%" << paraCnt << " = load " + type + "* @" + assignTrg << endl;
@@ -1237,18 +1206,8 @@ void llvm(){
                 string size;
                 if(treeMap[i-2][1]=="]"){
                     assignTrg = treeMap[i-10][1] + treeMap[i-8][1] + treeMap[i-5][1] + treeMap[i-2][1];
-                    for(j=scopeRow; j>0; j--){
-                        if(scopeMap[j][0]<=treeMap[i][2] && scopeMap[j][1]==treeMap[i-10][1]){
-                            size = scopeMap[j][5];
-                            if(scopeMap[j][2]=="int"){
-                                type = "i32";
-                            }
-                            else{
-                                type = "double";
-                            }
-                            break;
-                        }
-                    }
+                    type = getType(i, i-10);
+                    size = getSize(i, i-10);
                     cout << "%" << paraCnt << " = getelementptr inbounds [" + size + " x " + type + "]* %" + treeMap[i-10][1] + ", i32 0, i64 " + treeMap[i-5][1] << endl;
                     paraList[paraCnt][0] = "%"+itos(paraCnt);
                     paraList[paraCnt][1] = assignTrg;
@@ -1258,17 +1217,7 @@ void llvm(){
                 //id = id + num + array...
                 else{
                     assignTrg = treeMap[i-2][1];
-                    for(j=scopeRow; j>0; j--){
-                        if(scopeMap[j][0]<=treeMap[i][2] && scopeMap[j][1]==assignTrg){
-                            if(scopeMap[j][2]=="int"){
-                                type = "i32";
-                            }
-                            else{
-                                type = "double";
-                            }
-                            break;
-                        }
-                    }
+                    type = getType(i, i-2);
                 }
 
                 for(k=0; k<paraCnt; k++){
@@ -1301,18 +1250,8 @@ void llvm(){
                 //array = id + num...
                 if(treeMap[i-2][1]=="]"){
                     assignTrg = treeMap[i-10][1] + treeMap[i-8][1] + treeMap[i-5][1] + treeMap[i-2][1];
-                    for(j=scopeRow; j>0; j--){
-                        if(scopeMap[j][0]<=treeMap[i][2] && scopeMap[j][1]==treeMap[i-10][1]){
-                            size = scopeMap[j][5];
-                            if(scopeMap[j][2]=="int"){
-                                type = "i32";
-                            }
-                            else{
-                                type = "double";
-                            }
-                            break;
-                        }
-                    }
+                    type = getType(i, i-10);
+                    size = getSize(i, i-10);
                     cout << "%" << paraCnt << " = getelementptr inbounds [" + size + " x " + type + "]* %" + treeMap[i-10][1] + ", i32 0, i64 " + treeMap[i-5][1] << endl;
                     paraList[paraCnt][0] = "%"+itos(paraCnt);
                     paraList[paraCnt][1] = assignTrg;
@@ -1321,20 +1260,8 @@ void llvm(){
                 }
                 //id = id + num + array...
                 else{
-
                     assignTrg = treeMap[i-2][1];
-                    for(j=scopeRow; j>0; j--){
-                        if(scopeMap[j][0]<=treeMap[i][2] && scopeMap[j][1]==assignTrg){
-                            if(scopeMap[j][2]=="int"){
-                                type = "i32";
-                            }
-                            else{
-                                type = "double";
-                            }
-                            break;
-                        }
-                    }
-
+                    type = getType(i, i-2);
                 }
 
                 for(k=0; k<paraCnt; k++){
@@ -1440,19 +1367,7 @@ void llvm(){
             int j;
             int inParaList=0;
             printVal = treeMap[i+2][1];
-            /*
-            for(j=scopeRow; j>0; j--){
-                if(scopeMap[j][0]<=treeMap[i][2] && scopeMap[j][1]==treeMap[i+2][1]){
-                    if(scopeMap[j][2]=="int"){
-                        printType = "i32";
-                    }
-                    else{
-                        printType = "double";
-                    }
-                    break;
-                }
-            }*/
-            printType = getTyep(i, i+2);
+            printType = getType(i, i+2);
             for(j=0; j<paraCnt; j++){
                 if(paraList[j][1]==printVal){
                     inParaList = 1;
@@ -1556,7 +1471,7 @@ void llvm(){
     }
 }
 
-string getTyep(int i, int k){
+string getType(int i, int k){
     int j;
     for(j=scopeRow; j>0; j--){
         if(scopeMap[j][0]<=treeMap[i][2] && scopeMap[j][1]==treeMap[k][1]){
@@ -1566,6 +1481,15 @@ string getTyep(int i, int k){
             else{
                 return "double";
             }
+        }
+    }
+}
+
+string getSize(int i, int k){
+    int j;
+    for(j=scopeRow; j>0; j--){
+        if(scopeMap[j][0]<=treeMap[i][2] && scopeMap[j][1]==treeMap[k][1]){
+            return scopeMap[j][5];
         }
     }
 }
