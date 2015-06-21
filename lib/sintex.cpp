@@ -28,13 +28,14 @@ int is_keyword(string);
 int is_num(string);
 void buildTree(int);
 void llvm();
+string getTyep(int, int);
 string itos(int);
 string findType(int, int, string, string);
 
 
 
 string mainMap[1024]={};
-string scopeMap[128][5]={};
+string scopeMap[128][6]={};
 string assignTable[64][3]={};
 int scopeRow;
 int assignRow;
@@ -47,12 +48,13 @@ string followMerge[32][32]={};      //according followBasic array, get the first
 string finalFollowMap[64][32]={};   //store follow products of each nonterminal(according followRelative and followMerge array)
 string llTableMap[256][10]={};      //store llTable
 string treeMap[1024][3]={};
+string paraList[64][4]={};
 
 int grammerRow;                     //the row of grammar
 int firstRow;                       //the number of nonterminal
 int mainCnt;
 int treeRow;
-
+int paraCnt;
 
 struct Tree
 {
@@ -183,7 +185,7 @@ int main(){
     llvm();
 
     for(int i=0; i<scopeRow; i++){
-        for(int j=0; j<5; j++){
+        for(int j=0; j<6; j++){
             cout << scopeMap[i][j] << "\t";
         }
         cout << endl;
@@ -191,21 +193,27 @@ int main(){
 
     cout << endl;
 
+    for(int i=0; i<20; i++){
+        for(int j=0; j<4; j++){
+            cout << paraList[i][j] << "\t";
+        }
+        cout << endl;
+    }
+
+/*
     for(int i=0; i<assignRow; i++){
         for(int j=0; j<3; j++){
             cout << assignTable[i][j] << "\t";
         }
         cout << endl;
-    }
+    }*/
     int i;
-    for(i=0; i<100; i++){
+    for(i=300; i<400; i++){
         cout << treeMap[i][0] << " " << treeMap[i][1] << " " << treeMap[i][2] << endl;
     }
 
 
 }
-
-
 
 void readGrammer(){
 
@@ -809,6 +817,7 @@ void findScope(){
                 scopeMap[scopeRow][2] = mainMap[i];
                 if(mainMap[i+3]=="["){
                     scopeMap[scopeRow][3] = "true";
+                    scopeMap[scopeRow][5] = mainMap[i+5];
                 }
                 else{
                     scopeMap[scopeRow][3] = "false";
@@ -864,7 +873,70 @@ void findScope(){
                         cout << "waring (scope " << scp << ") : " << targetID << " " << targetType << ",\t" << var << "\t" << numType << endl;
                     }
             }
-    }
+    }/*
+    for(i=0; i<treeRow; i++){
+           if(treeMap[i][1]=="int" || treeMap[i][1]=="double"){
+                scopeMap[scopeRow][0] = treeMap[i][2];
+                scopeMap[scopeRow][1] = treeMap[i+2][1];
+                scopeMap[scopeRow][2] = treeMap[i][1];
+                if(treeMap[i+4][1]=="["){
+                    scopeMap[scopeRow][3] = "true";
+                }
+                else{
+                    scopeMap[scopeRow][3] = "false";
+                }
+                if(treeMap[i+4][1]=="FunDecl"){
+                    scopeMap[scopeRow][4] = "true";
+                }
+                else{
+                    scopeMap[scopeRow][4] = "false";
+                }
+                scopeRow++;
+            }
+            else if(treeMap[i][1] == "==" || treeMap[i][1] == "!=" || treeMap[i][1] == ">=" ||
+                    treeMap[i][1] == "<=" || treeMap[i][1] == ">" || treeMap[i][1] == "<" || treeMap[i][1] == "="){
+                    int tmp=1;
+                    int flag=0;
+                    int nowDepth=atoi(treeMap[i][0].c_str());
+                    if(treeMap[i-2][1]=="]"){
+                        targetID = treeMap[i-10][1]+treeMap[i-8][1]+treeMap[i-5][1]+treeMap[i-2][1];
+                    }
+                    else{
+                        targetID = treeMap[i-2][1];
+                    }
+                    int equal = 0;
+                    if(treeMap[i][1] == "=" && treeMap[i+6][1]==";"){
+                        equal = 1;
+                    }
+                    numType = "int";
+                    while(atoi(treeMap[i+tmp][0].c_str()) <= nowDepth){
+                        if(treeMap[i+tmp][1] == "id" || treeMap[i+tmp][1] == "num" || treeMap[i+tmp][1] == "BinOp"){
+                            var = treeMap[i+tmp+1][1];
+                            inva = treeMap[i+tmp+1][1];
+                            cout << "HI " << endl;
+                            rightType = findType(equal, atoi(treeMap[i][0].c_str()), targetID, inva);
+                            if(rightType=="double"){
+                                numType = "double";
+                            }
+                            else if(rightType=="operator"){
+                                var = "temp";
+                            }
+                        }
+                        tmp++;
+                    }
+
+                    for(k=scopeRow; k>0; k--){
+                        if(scopeMap[k][1]==targetID && atoi(scopeMap[k][0].c_str())<=atoi(treeMap[i][0].c_str())){
+                            targetType = scopeMap[k][2];
+                            scp = scopeMap[k][0];
+                            break;
+                        }
+                    }
+                    if(targetType != numType){
+                        cout << "waring (scope " << scp << ") : " << targetID << " " << targetType << ",\t" << var << "\t" << numType << endl;
+                    }
+            }
+    }*/
     printToFile();
 }
 
@@ -935,8 +1007,6 @@ void printToFile(){
 void llvm(){
     int i;
     int globle = 1;
-    int paraCnt = 1;
-
     int isArray=0;
     int isNumAssign=0;
 
@@ -948,8 +1018,12 @@ void llvm(){
     string declareType;
 
     string arraySize;
+    paraCnt = 1;
+    string assignTrg, assignVal;
+    string printVal, printType;
 
-    cout << "@.str = private constant[4 x i8] c\"%d\\0A\\00\"" << endl;
+    cout << "@.stri = private constant[4 x i8] c\"%d\\0A\\00\"" << endl;
+    cout << "@.strd = private constant[4 x i8] c\"%lf\\0A\\00\"" << endl;
     cout << "declare i32 @printf(i8*, ...)" << endl;
     for(i=0; i<treeRow; i++){
         if(treeMap[i][1]=="Type" && treeMap[i+5][1]=="FunDecl"){
@@ -959,10 +1033,10 @@ void llvm(){
             funcType = treeMap[i+1][1];
             funcName = treeMap[i+3][1];
             if(funcType=="int"){
-                cout << "define i32 @" << funcName << "() #0 {" << endl;
+                cout << "define i32 @" << funcName << "(){" << endl;
             }
             else if(funcType=="double"){
-                cout << "define double @" << funcName << "() #0 {" << endl;
+                cout << "define double @" << funcName << "(){" << endl;
             }
             else{
                 cout << "err in into-func" << endl;
@@ -974,9 +1048,9 @@ void llvm(){
             globle = 1;
             funcIndex = "0";
             cout << "}" << endl;
+            cout << endl;
         }
         else if(treeMap[i][1]=="Type" && treeMap[i+5][1]!="FunDecl"){
-            //«Å§i
             declareType=treeMap[i+1][1];
             declareName=treeMap[i+3][1];
             if(treeMap[i+5][1]=="["){
@@ -1027,11 +1101,387 @@ void llvm(){
             }
         }
         else if(treeMap[i][1]=="="){
-            //assign
+            string type;
+            //only assign num or id
+            if(treeMap[i+6][1]==";" || treeMap[i+7][1]==";"){
+                if(treeMap[i+2][1]=="num"){
+                    //array = num
+                    int j;
+                    if(treeMap[i-2][1]=="]"){
+                        string size;
+                        assignTrg = treeMap[i-10][1] + treeMap[i-8][1] + treeMap[i-5][1] + treeMap[i-2][1];
+                        assignVal = treeMap[i+3][1];
+                        for(j=scopeRow; j>0; j--){
+                            if(scopeMap[j][0]<=treeMap[i][2] && scopeMap[j][1]==treeMap[i-10][1]){
+                                size = scopeMap[j][5];
+                                if(scopeMap[j][2]=="int"){
+                                    type = "i32";
+                                }
+                                else{
+                                    type = "double";
+                                }
+                                break;
+                            }
+                        }
+                        cout << "%" << paraCnt << " = getelementptr inbounds [" + size + " x " + type + "]* %" + treeMap[i-10][1] + ", i32 0, i64 " + treeMap[i-5][1] << endl;
+                        cout << "store " + type + " " + assignVal + ", " + type + "* %" << paraCnt << endl;
+                        paraList[paraCnt][0] = "%"+itos(paraCnt);
+                        paraList[paraCnt][1] = assignTrg;
+                        paraList[paraCnt][2] = type;
+                        paraList[paraCnt][3] = assignVal;
+                        paraCnt++;
+                    }
+                    //id = num
+                    else{
+                        assignTrg = treeMap[i-2][1];
+                        assignVal = treeMap[i+3][1];
+                        int j;
+                        for(j=scopeRow; j>0; j--){
+                            if(scopeMap[j][0]<=treeMap[i][2] && scopeMap[j][1]==treeMap[i-2][1]){
+                                if(scopeMap[j][2]=="int"){
+                                    type = "i32";
+                                }
+                                else{
+                                    type = "double";
+                                }
+                                break;
+                            }
+                        }
+                        if(scopeMap[j][0]=="0"){
+                            cout << "store " + type + " " + assignVal + ", " + type + "* @" + assignTrg << endl;
+                            cout << "%" << paraCnt << " = load " + type + "* @" + assignTrg << endl;
+                        }
+                        else{
+                            cout << "store " + type + " " + assignVal + ", " + type + "* %" + assignTrg << endl;
+                            cout << "%" << paraCnt << " = load " + type + "* %" + assignTrg << endl;
+                        }
+                        paraList[paraCnt][0] = "%"+itos(paraCnt);
+                        paraList[paraCnt][1] = assignTrg;
+                        paraList[paraCnt][2] = type;
+                        paraList[paraCnt][3] = assignVal;
+                        paraCnt++;
+                    }
+                }
+                else if(treeMap[i+2][1]=="id"){
+                    int j;
+                    //array = id
+                    if(treeMap[i-2][1]=="]"){/*
+                        string size;
+                        assignTrg = treeMap[i-10][1] + treeMap[i-8][1] + treeMap[i-5][1] + treeMap[i-2][1];
+                        assignVal = treeMap[i+3][1];
+                        for(j=scopeRow; j>0; j--){
+                            if(scopeMap[j][0]<=treeMap[i][2] && scopeMap[j][1]==treeMap[i-10][1]){
+                                size = scopeMap[j][5];
+                                if(scopeMap[j][2]=="int"){
+                                    type = "i32";
+                                }
+                                else{
+                                    type = "double";
+                                }
+                                break;
+                            }
+                        }
+                        cout << "%" << paraCnt << " = getelementptr inbounds [" + size + " x " + type + "]* %" + treeMap[i-10][1] + ", i32 0, i64 " + treeMap[i-5][1] << endl;
+                        cout << "store " + type + " " + assignVal + ", " + type + "* %" << paraCnt << endl;
+                        paraList[paraCnt][0] = assignTrg;
+                        paraList[paraCnt][1] = type;
+                        paraList[paraCnt][2] = assignVal;
+                        paraList[paraCnt][3] = scopeMap[j][0];
+                        paraCnt++;*/
+                    }
+                    //id = id
+                    else{
+                        int j, par;
+                        assignTrg = treeMap[i-2][1];
+                        assignVal = treeMap[i+3][1];
+                        for(j=0; j<paraCnt; j++){
+                            if(assignVal==paraList[j][1]){
+                                assignVal = paraList[j][3];
+                                par = j;
+                                break;
+                            }
 
+                        }
+
+                        for(j=scopeRow; j>0; j--){
+                            if(scopeMap[j][0]<=treeMap[i][2] && scopeMap[j][1]==treeMap[i-2][1]){
+                                if(scopeMap[j][2]=="int"){
+                                    type = "i32";
+                                }
+                                else{
+                                    type = "double";
+                                }
+                                break;
+                            }
+                        }
+                        if(scopeMap[j][0]=="0"){
+                            cout << "store " + type + " %" << par << ", " + type + "* @" + assignTrg << endl;
+                            cout << "%" << paraCnt << " = load " + type + "* @" + assignTrg << endl;
+                        }
+                        else{
+                            cout << "store " + type + " %" << par << ", " + type + "* %" + assignTrg << endl;
+                            cout << "%" << paraCnt << " = load " + type + "* %" + assignTrg << endl;
+                        }
+                        paraList[paraCnt][0] = "%"+itos(paraCnt);
+                        paraList[paraCnt][1] = assignTrg;
+                        paraList[paraCnt][2] = type;
+                        paraList[paraCnt][3] = assignVal;
+                        paraCnt++;
+                    }
+                }
+            }
+            //only assign function
+            else if(treeMap[i+5][1]=="(" && treeMap[i+11][1]==";"){
+                int j, k;
+                int inpar=0;
+                string size;
+                if(treeMap[i-2][1]=="]"){
+                    assignTrg = treeMap[i-10][1] + treeMap[i-8][1] + treeMap[i-5][1] + treeMap[i-2][1];
+                    for(j=scopeRow; j>0; j--){
+                        if(scopeMap[j][0]<=treeMap[i][2] && scopeMap[j][1]==treeMap[i-10][1]){
+                            size = scopeMap[j][5];
+                            if(scopeMap[j][2]=="int"){
+                                type = "i32";
+                            }
+                            else{
+                                type = "double";
+                            }
+                            break;
+                        }
+                    }
+                    cout << "%" << paraCnt << " = getelementptr inbounds [" + size + " x " + type + "]* %" + treeMap[i-10][1] + ", i32 0, i64 " + treeMap[i-5][1] << endl;
+                    paraList[paraCnt][0] = "%"+itos(paraCnt);
+                    paraList[paraCnt][1] = assignTrg;
+                    paraList[paraCnt][2] = type;
+                    paraCnt++;
+                }
+                //id = id + num + array...
+                else{
+                    assignTrg = treeMap[i-2][1];
+                    for(j=scopeRow; j>0; j--){
+                        if(scopeMap[j][0]<=treeMap[i][2] && scopeMap[j][1]==assignTrg){
+                            if(scopeMap[j][2]=="int"){
+                                type = "i32";
+                            }
+                            else{
+                                type = "double";
+                            }
+                            break;
+                        }
+                    }
+                }
+
+                for(k=0; k<paraCnt; k++){
+                    if(assignTrg==paraList[k][1]){
+                        inpar = 1;
+                        assignTrg = paraList[k][0];
+                        break;
+                    }
+                }
+
+                assignVal = treeMap[i+3][1] + "()";
+                cout << "%" << paraCnt << " = call " + type + " @" + assignVal << endl;
+                if(inpar){
+                    cout << "store " + type + " %" << paraCnt << ", " + type + " " + assignTrg << endl;
+                }
+                else{
+                    cout << "store " + type + " %" << paraCnt << ", " + type + "* %" + assignTrg << endl;
+                }
+                paraCnt++;
+            }
+            else{
+                int tmp = i+1;
+                int j, k, par;
+                int calCnt = 0;
+                int inpar=0;
+                string calculus[32]={};
+                string left;
+                string right;
+                string size;
+                //array = id + num...
+                if(treeMap[i-2][1]=="]"){
+                    assignTrg = treeMap[i-10][1] + treeMap[i-8][1] + treeMap[i-5][1] + treeMap[i-2][1];
+                    for(j=scopeRow; j>0; j--){
+                        if(scopeMap[j][0]<=treeMap[i][2] && scopeMap[j][1]==treeMap[i-10][1]){
+                            size = scopeMap[j][5];
+                            if(scopeMap[j][2]=="int"){
+                                type = "i32";
+                            }
+                            else{
+                                type = "double";
+                            }
+                            break;
+                        }
+                    }
+                    cout << "%" << paraCnt << " = getelementptr inbounds [" + size + " x " + type + "]* %" + treeMap[i-10][1] + ", i32 0, i64 " + treeMap[i-5][1] << endl;
+                    paraList[paraCnt][0] = "%"+itos(paraCnt);
+                    paraList[paraCnt][1] = assignTrg;
+                    paraList[paraCnt][2] = type;
+                    paraCnt++;
+                }
+                //id = id + num + array...
+                else{
+
+                    assignTrg = treeMap[i-2][1];
+                    for(j=scopeRow; j>0; j--){
+                        if(scopeMap[j][0]<=treeMap[i][2] && scopeMap[j][1]==assignTrg){
+                            if(scopeMap[j][2]=="int"){
+                                type = "i32";
+                            }
+                            else{
+                                type = "double";
+                            }
+                            break;
+                        }
+                    }
+
+                }
+
+                for(k=0; k<paraCnt; k++){
+                    if(assignTrg==paraList[k][1]){
+                        inpar = 1;
+                        assignTrg = paraList[k][0];
+                        break;
+                    }
+                }
+
+                while(treeMap[i][0]<=treeMap[tmp][0]){
+                    if((treeMap[tmp][0]>treeMap[tmp+1][0] || treeMap[tmp][1]=="(" || treeMap[tmp][1]==")" || treeMap[tmp][1]=="[" || treeMap[tmp][1]=="]") && treeMap[tmp][1]!="epsilon"){
+                        calculus[calCnt] = treeMap[tmp][1];
+                        if(calculus[calCnt]=="]"){
+                            calculus[calCnt-3]=calculus[calCnt-3]+calculus[calCnt-2]+calculus[calCnt-1]+calculus[calCnt];
+                            calculus[calCnt]=" ";
+                            calculus[calCnt-1]=" ";
+                            calculus[calCnt-2]=" ";
+                            calCnt = calCnt-3;
+                        }
+                        calCnt++;
+                    }
+                    tmp++;
+                }
+
+                for(j=0; j<calCnt; j++){
+                    if(calculus[j]=="*" || calculus[j]=="/"){
+                            int r=1, s=1;
+                            while(calculus[j-r]=="space"){
+                                r++;
+                            }
+                            left=calculus[j-r];
+                            while(calculus[j+s]=="space"){
+                                s++;
+                            }
+                            right=calculus[j+s];
+
+                            for(k=0; k<paraCnt; k++){
+                                if(left==paraList[k][1] && paraList[k][4]<=treeMap[i][2]){
+                                    left = paraList[k][0];
+                                }
+                                if(right==paraList[k][1] && paraList[k][4]<=treeMap[i][2]){
+                                    right = paraList[k][0];
+                                }
+                            }
+                            if(calculus[j]=="*"){
+                                cout << "%" << paraCnt << " = mul " + type + " " + left + ", " + right << endl;
+                            }
+                            else{
+                                //division
+                                cout << "%" << paraCnt << " = mul " + type + " " + left + ", " + right << endl;
+                            }
+                            calculus[j] = "%"+itos(paraCnt);
+                            calculus[j-r] = "space";
+                            calculus[j+s] = "space";
+                            paraList[paraCnt][0] = calculus[j];
+                            paraList[paraCnt][1] = calculus[j];
+                            paraCnt++;
+                    }
+                }
+                for(j=0; j<calCnt; j++){
+                    if(calculus[j]=="+" || calculus[j]=="-"){
+                            int r=1, s=1;
+                            while(calculus[j-r]=="space"){
+                                r++;
+                            }
+                            left=calculus[j-r];
+                            while(calculus[j+s]=="space"){
+                                s++;
+                            }
+                            right=calculus[j+s];
+
+                            for(k=0; k<paraCnt; k++){
+                                if(left==paraList[k][1]){
+                                    left = paraList[k][0];
+                                }
+                                if(right==paraList[k][1]){
+                                    right = paraList[k][0];
+                                }
+                            }
+                            if(calculus[j]=="+"){
+                                cout << "%" << paraCnt << " = add " + type + " " + left + ", " + right << endl;
+                            }
+                            else{
+                                cout << "%" << paraCnt << " = sub " + type + " " + left + ", " + right << endl;
+                            }
+                            calculus[j] = "%"+itos(paraCnt);
+                            calculus[j-r] = "space";
+                            calculus[j+s] = "space";
+                            assignVal = calculus[j];
+                            paraCnt++;
+                    }
+                }
+                if(inpar){
+                    cout << "store " + type + " " + assignVal + ", " + type + " " + assignTrg << endl;
+                }
+                else{
+                    cout << "store " + type + " " + assignVal + ", " + type + "* %" + assignTrg << endl;
+                }
+            }
         }
         else if(treeMap[i][1]=="print"){
+            int j;
+            int inParaList=0;
+            printVal = treeMap[i+2][1];
+            /*
+            for(j=scopeRow; j>0; j--){
+                if(scopeMap[j][0]<=treeMap[i][2] && scopeMap[j][1]==treeMap[i+2][1]){
+                    if(scopeMap[j][2]=="int"){
+                        printType = "i32";
+                    }
+                    else{
+                        printType = "double";
+                    }
+                    break;
+                }
+            }*/
+            printType = getTyep(i, i+2);
+            for(j=0; j<paraCnt; j++){
+                if(paraList[j][1]==printVal){
+                    inParaList = 1;
+                    printVal = paraList[j][0];
+                }
+            }
+            if(inParaList){
+                if(printType=="i32"){
+                    cout << "call i32 (i8*, ...)* @printf(i8* getelementptr inbounds ([4 x i8]* @.stri, i32 0, i32 0), i32 " + printVal + ")" << endl;
+                }
+                else{
+                    cout << "call i32 (i8*, ...)* @printf(i8* getelementptr inbounds ([4 x i8]* @.strd, i32 0, i32 0), double " + printVal + ")" << endl;
+                }
+            }
+            else{
+                if(printType=="i32"){
+                    cout << "%" << paraCnt << " = load i32* %" + printVal << endl;
+                    cout << "call i32 (i8*, ...)* @printf(i8* getelementptr inbounds ([4 x i8]* @.stri, i32 0, i32 0), i32 %" << paraCnt << ")" << endl;
+                }
+                else{
+                    cout << "%" << paraCnt << " = load double* %" + printVal << endl;
 
+                    cout << "call i32 (i8*, ...)* @printf(i8* getelementptr inbounds ([4 x i8]* @.strd, i32 0, i32 0), double %" << paraCnt << ")" << endl;
+                }
+                paraList[paraCnt][0] = "%"+itos(paraCnt);
+                paraList[paraCnt][1] = printVal;
+                paraList[paraCnt][2] = printType;
+                paraCnt++;
+            }
         }
         else if(treeMap[i][1]=="if"){
 
@@ -1039,7 +1489,84 @@ void llvm(){
         else if(treeMap[i][1]=="while"){
 
         }
+        else if(treeMap[i][1]=="return"){
+            int j;
+            int inParaList=0;
+            int isDouble=0;
+            string retVal, retType;
+            string num;
+            if(treeMap[i+2][1]=="num"){
+                num = treeMap[i+3][1];
+                for(j=0; j<num.length(); j++){
+                    if(num[j]=='.'){
+                        isDouble=1;
+                        break;
+                    }
+                }
+                if(isDouble){
+                    cout << "ret double " + num << endl;
+                }
+                else{
+                    cout << "ret i32 " + num << endl;
+                }
+            }
+            else{
+                for(j=scopeRow; j>0; j--){
+                    if(scopeMap[j][0]<=treeMap[i][2] && scopeMap[j][1]==treeMap[i+3][1]){
+                        if(scopeMap[j][2]=="int"){
+                            retType = "i32";
+                        }
+                        else{
+                            retType = "double";
+                        }
+                        break;
+                    }
+                }
+                for(j=0; j<paraCnt; j++){
+                    if(paraList[j][1]==treeMap[i+3][1]){
+                        inParaList = 1;
+                        retVal = paraList[j][0];
+                    }
+                }
+                if(inParaList){
+                    if(retType=="i32"){
+                        cout << "ret i32 " + retVal << endl;
+                    }
+                    else{
+                        cout << "ret double " + retVal << endl;
+                    }
+                }
+                else{
+                    if(retType=="i32"){
+                        cout << "%" << paraCnt << " = load i32* %" + retVal << endl;
+                        cout << "ret i32 %" + retVal << endl;
+                    }
+                    else{
+                        cout << "%" << paraCnt << " = load double* %" + retVal << endl;
 
+                        cout << "ret double %" + retVal << endl;
+                    }
+                    paraList[paraCnt][0] = "%"+itos(paraCnt);
+                    paraList[paraCnt][1] = retVal;
+                    paraList[paraCnt][2] = retType;
+                    paraCnt++;
+                }
+            }
+        }
+    }
+}
+
+string getTyep(int i, int k){
+    int j;
+    for(j=scopeRow; j>0; j--){
+        if(scopeMap[j][0]<=treeMap[i][2] && scopeMap[j][1]==treeMap[k][1]){
+            if(scopeMap[j][2]=="int"){
+                return "i32";
+            }
+            else{
+                return "double";
+            }
+        }
     }
 }
 
