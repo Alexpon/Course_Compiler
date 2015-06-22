@@ -31,7 +31,7 @@ void llvm();
 string getType(int, int);
 string getSize(int, int);
 string itos(int);
-string findType(int, string, string);
+string findType(int, string);
 
 
 
@@ -48,6 +48,7 @@ string finalFollowMap[64][32]={};   //store follow products of each nonterminal(
 string llTableMap[256][10]={};      //store llTable
 string treeMap[1024][3]={};
 string paraList[64][4]={};
+
 
 int grammerRow;                     //the row of grammar
 int firstRow;                       //the number of nonterminal
@@ -105,70 +106,6 @@ class StackT        //the stack store type "Tree"
         }
 };
 
-class Stack
-{
-	private:
-		int top;
-		int size;
-		Scope *array;
-	public:
-		Stack(int s){
-			size=s;
-			array=new Scope[s];
-			top=0;
-		}
-
-		void push(Scope item){
-			if(top==size)
-				cout<<"Stack is full!"<<endl;
-			else
-				*(array+top)=item;
-			top++;
-		}
-
-		void pop(){
-			if(top==0)
-				cout<<"Stack is empty!"<<endl;
-			else
-				top--;
-		}
-
-        int isEmpty(){
-            if(top==0)
-                return 1;
-            else
-                return 0;
-        }
-
-        void setCount(int cnt){
-            (*(array+top-1)).count = cnt;
-        }
-
-        void setFlag(){
-            (*(array+top-1)).flag = 1;
-        }
-
-		int getCnt(){
-            if(top==0)
-				cout<<"Stack is empty!"<<endl;
-			else{
-			    Scope item;
-				item=*(array+top-1);
-				return item.count;
-			}
-		}
-
-		int getFlag(){
-            if(top==0)
-				cout<<"Stack is empty!"<<endl;
-			else{
-			    Scope item;
-				item=*(array+top-1);
-				return item.flag;
-			}
-		}
-};
-
 int main(){
     readGrammer();
     scanFirst();
@@ -198,11 +135,11 @@ int main(){
         cout << endl;
     }
 
-/*
+
     int i;
-    for(i=250; i<400; i++){
+    for(i=100; i<250; i++){
         cout << treeMap[i][0] << " " << treeMap[i][1] << " " << treeMap[i][2] << endl;
-    }*/
+    }
 }
 
 void readGrammer(){
@@ -666,9 +603,9 @@ void buildTree(int llrow){
     int llcnt = 2;
     int refR, index;
     int scpCnt=0;
-    Stack scStack(128);
-    Scope scope;
-
+    int scopeCounter = 0;
+    int scopeT[64]={0};
+    int scopePtr=0;
     treeRow=0;
     Tree tmpTree;
     Tree newNode;
@@ -681,62 +618,42 @@ void buildTree(int llrow){
         index=tmpTree.index+1;
         if(tmpTree.value == mainMap[mainCnt]){
 
-            if(tmpTree.value=="{"){
-                scope.count = scpCnt;
-                scope.flag = 0;
-                scStack.push(scope);
+            if(tmpTree.value=="if" || tmpTree.value=="else" || tmpTree.value=="while"){
+                scopeCounter++;
+                scopePtr++;
+                scopeT[scopePtr] = scopeCounter;
             }
             else if(tmpTree.value=="}"){
-                scStack.pop();
-            }
-            else if(tmpTree.value=="int" || tmpTree.value=="double"){
-                if(scStack.isEmpty()){
-                    treeMap[treeRow][2] = "0";
-                }
-                else{
-                    if(scStack.getFlag()==0){
-                        scpCnt++;
-                        scStack.setCount(scpCnt);
-                        scStack.setFlag();
-                    }
-                    treeMap[treeRow][2] = itos(scStack.getCnt());
-                }
-            }
-            else{
-                if(scStack.isEmpty())
-                    treeMap[treeRow][2] = "0";
-                else
-                    treeMap[treeRow][2] = itos(scStack.getCnt());
+                scopePtr--;
             }
 
             treeMap[treeRow][0] = itos(tmpTree.index);
             treeMap[treeRow][1] = tmpTree.value;
+            treeMap[treeRow][2] = itos(scopeT[scopePtr]);
             treeRow++;
             mainCnt++;
 
             if(mainMap[mainCnt-1]=="id"){
                 treeMap[treeRow][0] = itos(tmpTree.index+1);
                 treeMap[treeRow][1] = mainMap[mainCnt];
-                if(scStack.isEmpty())
-                    treeMap[treeRow][2] = "0";
-                else
-                    treeMap[treeRow][2] = itos(scStack.getCnt());
+                treeMap[treeRow][2] = itos(scopeT[scopePtr]);
                 treeRow++;
                 mainCnt++;
             }
             if(mainMap[mainCnt-1]=="num"){
                 treeMap[treeRow][0] = itos(tmpTree.index+1);
                 treeMap[treeRow][1] = mainMap[mainCnt];
-                if(scStack.isEmpty())
-                    treeMap[treeRow][2] = "0";
-                else
-                    treeMap[treeRow][2] = itos(scStack.getCnt());
+                treeMap[treeRow][2] = itos(scopeT[scopePtr]);
                 treeRow++;
                 mainCnt++;
             }
         }
         else{
-
+            if(tmpTree.value=="FunDecl"){
+                scopeCounter++;
+                scopePtr++;
+                scopeT[scopePtr] = scopeCounter;
+            }
             treeMap[treeRow][0] = itos(tmpTree.index);
             treeMap[treeRow][1] = tmpTree.value;
             treeRow++;
@@ -772,35 +689,27 @@ void buildTree(int llrow){
 
 void findScope(){
     int i, j, k;
-    int scopeCounter=0;
-    string targetID, targetType;
-    string var, inva, numType, rightType;
-    string scp;
+    int scopeCounter = 0;
+    int scopeT[64]={0};
+    int scopePtr=0;
+
+    string targetID="", targetType="";
+    string var="", inva="";
+    string numType="", rightType="";
+    string scp = "";
     scopeRow=1;
-    Stack scStack(128);
-    Scope scope;
 
     for(i=0; i<mainCnt; i++){
-           if(mainMap[i]=="{" && mainMap[i-2]=="("){
-                scope.count = scopeCounter;
-                scope.flag = 0;
-                scStack.push(scope);
+           if((mainMap[i]=="{" && mainMap[i-2]=="(") || mainMap[i]=="if" || mainMap[i]=="else" || mainMap[i]=="while"){
+                scopeCounter++;
+                scopePtr++;
+                scopeT[scopePtr] = scopeCounter;
             }
             else if(mainMap[i]=="}"){
-                scStack.pop();
+                scopePtr--;
             }
             else if(mainMap[i]=="int" || mainMap[i]=="double"){
-                if(scStack.isEmpty()){
-                    scopeMap[scopeRow][0] = "0";
-                }
-                else{
-                    if(scStack.getFlag()==0){
-                        scopeCounter++;
-                        scStack.setCount(scopeCounter);
-                        scStack.setFlag();
-                    }
-                    scopeMap[scopeRow][0] = itos(scStack.getCnt());
-                }
+                scopeMap[scopeRow][0] = itos(scopeT[scopePtr]);
                 scopeMap[scopeRow][1] = mainMap[i+2];
                 scopeMap[scopeRow][2] = mainMap[i];
                 if(mainMap[i+3]=="["){
@@ -814,9 +723,8 @@ void findScope(){
                     scopeMap[scopeRow][4] = "true";
                     if(mainMap[i+4]!=")"){
                         scopeCounter++;
-                        scope.count = scopeCounter;
-                        scope.flag = 1;
-                        scStack.push(scope);
+                        scopePtr++;
+                        scopeT[scopePtr] = scopeCounter;
                     }
                 }
                 else{
@@ -831,7 +739,7 @@ void findScope(){
                     if(mainMap[i-1]=="]"){
                         targetID = mainMap[i-5]+mainMap[i-4]+mainMap[i-2]+mainMap[i-1];
                         for(j=scopeRow; j>0; j--){
-                            if(atoi(scopeMap[j][0].c_str())<=scopeCounter && scopeMap[j][1]==mainMap[i-5]){
+                            if(atoi(scopeMap[j][0].c_str())<=scopeT[scopePtr] && scopeMap[j][1]==mainMap[i-5]){
                                 if(scopeMap[j][2]=="int"){
                                     targetType = "int";
                                 }
@@ -845,7 +753,7 @@ void findScope(){
                     else{
                         targetID = mainMap[i-1];
                         for(j=scopeRow; j>0; j--){
-                            if(atoi(scopeMap[j][0].c_str())<=scopeCounter && scopeMap[j][1]==mainMap[i-1]){
+                            if(atoi(scopeMap[j][0].c_str())<=scopeT[scopePtr] && scopeMap[j][1]==mainMap[i-1]){
                                 if(scopeMap[j][2]=="int"){
                                     targetType = "int";
                                 }
@@ -856,9 +764,7 @@ void findScope(){
                             }
                         }
                     }
-                    int strange = 0;
-
-                    numType = "int";
+                    numType="int";
                     while(mainMap[i+tmp] != ";" && mainMap[i+tmp] != ")" && mainMap[i+tmp] != "\0"){
                         if(mainMap[i+tmp]=="id" || mainMap[i+tmp]=="num"){
                                 tmp++;
@@ -868,7 +774,7 @@ void findScope(){
                         }
                         else{
                             var = mainMap[i+tmp];
-                            rightType = findType(scopeCounter, targetID, var);
+                            rightType = findType(scopeT[scopePtr], var);
                             if(rightType=="double"){
                                 numType = "double";
                             }
@@ -891,7 +797,7 @@ void findScope(){
     printToFile();
 }
 
-string findType(int scp, string tar, string var){
+string findType(int scp, string var){
     int i,k;
     string tmpNum;
     if(var=="+" || var=="-" ||var=="*" || var=="/"){
