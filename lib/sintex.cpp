@@ -31,15 +31,13 @@ void llvm();
 string getType(int, int);
 string getSize(int, int);
 string itos(int);
-string findType(int, int, string, string);
+string findType(int, string, string);
 
 
 
 string mainMap[1024]={};
 string scopeMap[128][6]={};
-string assignTable[64][3]={};
 int scopeRow;
-int assignRow;
 string grammerMap[100][10]={};      //store grammar.txt into this array
 string firstMap[64][32]={};         //store basic first products include some nonterminal(Reverse order)
 string finalFirstMap[64][32]={};    //store first products of each nonterminal(In order)
@@ -172,7 +170,6 @@ class Stack
 };
 
 int main(){
-    assignRow = 0;
     readGrammer();
     scanFirst();
     reSetFirst();
@@ -202,18 +199,10 @@ int main(){
     }
 
 /*
-    for(int i=0; i<assignRow; i++){
-        for(int j=0; j<3; j++){
-            cout << assignTable[i][j] << "\t";
-        }
-        cout << endl;
-    }
     int i;
-    for(i=300; i<400; i++){
+    for(i=250; i<400; i++){
         cout << treeMap[i][0] << " " << treeMap[i][1] << " " << treeMap[i][2] << endl;
     }*/
-
-
 }
 
 void readGrammer(){
@@ -671,8 +660,6 @@ int is_num(string str){
     }
 }
 
-/**************************/
-
 void buildTree(int llrow){
     StackT trace(128);
     mainCnt = 0;
@@ -794,7 +781,7 @@ void findScope(){
     Scope scope;
 
     for(i=0; i<mainCnt; i++){
-           if(mainMap[i]=="{"){
+           if(mainMap[i]=="{" && mainMap[i-2]=="("){
                 scope.count = scopeCounter;
                 scope.flag = 0;
                 scStack.push(scope);
@@ -802,7 +789,7 @@ void findScope(){
             else if(mainMap[i]=="}"){
                 scStack.pop();
             }
-            else if(mainMap[i]=="int" || mainMap[i]=="double" || mainMap[i]=="void"){
+            else if(mainMap[i]=="int" || mainMap[i]=="double"){
                 if(scStack.isEmpty()){
                     scopeMap[scopeRow][0] = "0";
                 }
@@ -825,6 +812,12 @@ void findScope(){
                 }
                 if(mainMap[i+3]=="("){
                     scopeMap[scopeRow][4] = "true";
+                    if(mainMap[i+4]!=")"){
+                        scopeCounter++;
+                        scope.count = scopeCounter;
+                        scope.flag = 1;
+                        scStack.push(scope);
+                    }
                 }
                 else{
                     scopeMap[scopeRow][4] = "false";
@@ -837,149 +830,90 @@ void findScope(){
                     int flag=0;
                     if(mainMap[i-1]=="]"){
                         targetID = mainMap[i-5]+mainMap[i-4]+mainMap[i-2]+mainMap[i-1];
+                        for(j=scopeRow; j>0; j--){
+                            if(atoi(scopeMap[j][0].c_str())<=scopeCounter && scopeMap[j][1]==mainMap[i-5]){
+                                if(scopeMap[j][2]=="int"){
+                                    targetType = "int";
+                                }
+                                else{
+                                    targetType = "double";
+                                }
+                                scp = scopeMap[j][0];
+                            }
+                        }
                     }
                     else{
                         targetID = mainMap[i-1];
+                        for(j=scopeRow; j>0; j--){
+                            if(atoi(scopeMap[j][0].c_str())<=scopeCounter && scopeMap[j][1]==mainMap[i-1]){
+                                if(scopeMap[j][2]=="int"){
+                                    targetType = "int";
+                                }
+                                else{
+                                    targetType = "double";
+                                }
+                                scp = scopeMap[j][0];
+                            }
+                        }
                     }
-                    int equal = 0;
-                    if(mainMap[i] == "="&&mainMap[i+3]==";"){
-                        equal = 1;
-                    }
+                    int strange = 0;
+
                     numType = "int";
-                    while(mainMap[i+tmp] != ";" && mainMap[i+tmp] != "{" && mainMap[i+tmp] != "\0"){
+                    while(mainMap[i+tmp] != ";" && mainMap[i+tmp] != ")" && mainMap[i+tmp] != "\0"){
                         if(mainMap[i+tmp]=="id" || mainMap[i+tmp]=="num"){
                                 tmp++;
                         }
-                        var = mainMap[i+tmp];
-
-                        inva = mainMap[i+tmp];
-                        rightType = findType(equal, scopeCounter, targetID, inva);
-                        if(rightType=="double"){
-                            numType = "double";
+                        if(mainMap[i+tmp]=="["){
+                                tmp=tmp+4;
                         }
-                        else if(rightType=="operator"){
-                            var = "temp";
-                        }
-                        tmp++;
-                    }
-
-                    for(k=scopeRow; k>0; k--){
-                        if(scopeMap[k][1]==targetID && atoi(scopeMap[k][0].c_str())<=scopeCounter){
-                            targetType = scopeMap[k][2];
-                            scp = scopeMap[k][0];
-                            break;
-                        }
-                    }
-                    if(targetType != numType){
-                        cout << "waring (scope " << scp << ") : " << targetID << " " << targetType << ",\t" << var << "\t" << numType << endl;
-                    }
-            }
-    }/*
-    for(i=0; i<treeRow; i++){
-           if(treeMap[i][1]=="int" || treeMap[i][1]=="double"){
-                scopeMap[scopeRow][0] = treeMap[i][2];
-                scopeMap[scopeRow][1] = treeMap[i+2][1];
-                scopeMap[scopeRow][2] = treeMap[i][1];
-                if(treeMap[i+4][1]=="["){
-                    scopeMap[scopeRow][3] = "true";
-                }
-                else{
-                    scopeMap[scopeRow][3] = "false";
-                }
-                if(treeMap[i+4][1]=="FunDecl"){
-                    scopeMap[scopeRow][4] = "true";
-                }
-                else{
-                    scopeMap[scopeRow][4] = "false";
-                }
-                scopeRow++;
-            }
-            else if(treeMap[i][1] == "==" || treeMap[i][1] == "!=" || treeMap[i][1] == ">=" ||
-                    treeMap[i][1] == "<=" || treeMap[i][1] == ">" || treeMap[i][1] == "<" || treeMap[i][1] == "="){
-                    int tmp=1;
-                    int flag=0;
-                    int nowDepth=atoi(treeMap[i][0].c_str());
-                    if(treeMap[i-2][1]=="]"){
-                        targetID = treeMap[i-10][1]+treeMap[i-8][1]+treeMap[i-5][1]+treeMap[i-2][1];
-                    }
-                    else{
-                        targetID = treeMap[i-2][1];
-                    }
-                    int equal = 0;
-                    if(treeMap[i][1] == "=" && treeMap[i+6][1]==";"){
-                        equal = 1;
-                    }
-                    numType = "int";
-                    while(atoi(treeMap[i+tmp][0].c_str()) <= nowDepth){
-                        if(treeMap[i+tmp][1] == "id" || treeMap[i+tmp][1] == "num" || treeMap[i+tmp][1] == "BinOp"){
-                            var = treeMap[i+tmp+1][1];
-                            inva = treeMap[i+tmp+1][1];
-                            cout << "HI " << endl;
-                            rightType = findType(equal, atoi(treeMap[i][0].c_str()), targetID, inva);
+                        else{
+                            var = mainMap[i+tmp];
+                            rightType = findType(scopeCounter, targetID, var);
                             if(rightType=="double"){
                                 numType = "double";
                             }
                             else if(rightType=="operator"){
-                                var = "temp";
+                                flag = 1;;
                             }
-                        }
-                        tmp++;
-                    }
-
-                    for(k=scopeRow; k>0; k--){
-                        if(scopeMap[k][1]==targetID && atoi(scopeMap[k][0].c_str())<=atoi(treeMap[i][0].c_str())){
-                            targetType = scopeMap[k][2];
-                            scp = scopeMap[k][0];
-                            break;
+                            tmp++;
                         }
                     }
                     if(targetType != numType){
-                        cout << "waring (scope " << scp << ") : " << targetID << " " << targetType << ",\t" << var << "\t" << numType << endl;
+                        if(flag){
+                            cout << "waring (scope " << scp << ") : " << targetID << " " << targetType << ",\ttmp\t" << numType << endl;
+                        }
+                        else{
+                            cout << "waring (scope " << scp << ") : " << targetID << " " << targetType << ",\t" << var << "\t" << numType << endl;
+                        }
                     }
             }
-    }*/
+    }
     printToFile();
 }
 
-string findType(int eq, int scp, string tar, string var){
+string findType(int scp, string tar, string var){
     int i,k;
     string tmpNum;
     if(var=="+" || var=="-" ||var=="*" || var=="/"){
         return "operator";
     }
-    else if(var=="(" || var==")"){
-        return "parentheses";
-    }
     else if(var[0]<48 || var[0]>57){
-        for(i=assignRow; i>=0; i--){
-            if(assignTable[i][1]==var && atoi(assignTable[i][0].c_str())<=scp){
-                tmpNum = assignTable[i][2];
-                for(k=0; k<tmpNum.length(); k++){
-                    if(var[k]=='.'){
-                        return "double";
-                    }
+        for(i=scopeRow; i>0; i--){
+            if(atoi(scopeMap[i][0].c_str())<=scp && scopeMap[i][1]==var){
+                if(scopeMap[i][2]=="int"){
+                    return "int";
                 }
-                return "int";
+                else{
+                    return "double";
+                }
             }
         }
     }
     else{
         for(k=0; k<var.length(); k++){
             if(var[k]=='.'){
-                if(eq){
-                    assignTable[assignRow][0] = itos(scp);
-                    assignTable[assignRow][1] = tar;
-                    assignTable[assignRow][2] = var;
-                    assignRow++;
-                }
                 return "double";
             }
-        }
-        if(eq){
-            assignTable[assignRow][0] = itos(scp);
-            assignTable[assignRow][1] = tar;
-            assignTable[assignRow][2] = var;
-            assignRow++;
         }
         return "int";
     }
@@ -1022,6 +956,9 @@ void llvm(){
     paraCnt = 1;
     string assignTrg, assignVal;
     string printVal, printType;
+
+    string ifElseIndex = "0";
+    string whileIndex = "0";
 
     cout << "@.stri = private constant[4 x i8] c\"%d\\0A\\00\"" << endl;
     cout << "@.strd = private constant[4 x i8] c\"%lf\\0A\\00\"" << endl;
@@ -1398,11 +1335,102 @@ void llvm(){
                 paraCnt++;
             }
         }
-        else if(treeMap[i][1]=="if"){
+        else if(treeMap[i][1]=="if" || treeMap[i][1]=="while"){
+            string cmpLeft = treeMap[i+4][1];
+            string cmpRight = treeMap[i+11][1];
+            string oper = treeMap[i+8][1];
+            string type;
+            int j;
+            int inParaListL = 0;
+            int inParaListR = 0;
+            if(treeMap[i+3][1]=="id"){
+                type = getType(i, i+4);
+                for(j=0; j<paraCnt; j++){
+                    if(paraList[j][1]==cmpLeft){
+                        inParaListL = 1;
+                        cmpLeft = paraList[j][0];
+                    }
+                }
+                if(inParaListL==0){
+                    cout << "%" << paraCnt <<" = load " + type + "* %" + cmpLeft << endl;
+                    paraList[paraCnt][0] = "%"+itos(paraCnt);
+                    paraList[paraCnt][1] = cmpLeft;
+                    paraList[paraCnt][2] = type;
+                    cmpLeft = paraList[paraCnt][0];
+                    paraCnt++;
+                }
+            }
+            if(treeMap[i+10][1]=="id"){
+                for(j=0; j<paraCnt; j++){
+                    if(paraList[j][1]==cmpRight){
+                        inParaListR = 1;
+                        cmpRight = paraList[j][0];
+                    }
+                }
+                if(inParaListL==0){
+                    cout << "%" << paraCnt <<" = load " + type + "* %" + cmpRight << endl;
+                    paraList[paraCnt][0] = "%"+itos(paraCnt);
+                    paraList[paraCnt][1] = cmpRight;
+                    paraList[paraCnt][2] = type;
+                    cmpRight = paraList[paraCnt][0];
+                    paraCnt++;
+                }
+            }
+
+            if(treeMap[i][1]=="while"){ //while
+                whileIndex = treeMap[i][0];
+                cout << "startWhile:" << endl;
+                cout << "br i1 %" << paraCnt << ", label %inWhile, label %endWhile" << endl;
+                cout << endl;
+                cout << "inWhile:" << endl;
+            }
+
+            if(oper=="=="){
+                cout << "%" << paraCnt << " = icmp eq " + type + " " + cmpLeft + ", " + cmpRight << endl;
+            }
+            else if(oper=="!="){
+                cout << "%" << paraCnt << " = icmp be " + type + " " + cmpLeft + ", " + cmpRight << endl;
+            }
+            else if(oper==">="){
+                cout << "%" << paraCnt << " = icmp sge " + type + " " + cmpLeft + ", " + cmpRight << endl;
+            }
+            else if(oper=="<="){
+                cout << "%" << paraCnt << " = icmp sle " + type + " " + cmpLeft + ", " + cmpRight << endl;
+            }
+            else if(oper==">"){
+                cout << "%" << paraCnt << " = icmp sgt " + type + " " + cmpLeft + ", " + cmpRight << endl;
+            }
+            else if(oper=="<"){
+                cout << "%" << paraCnt << " = icmp slt " + type + " " + cmpLeft + ", " + cmpRight << endl;
+            }
+
+            if(treeMap[i][1]=="if"){
+                cout << "br i1 %" << paraCnt << ", label %inIf, label %inElse" << endl;
+                cout << endl;
+                cout << "inIf:" << endl;
+
+            }
+
+            paraCnt++;
+        }
+        else if(treeMap[i][1]=="else"){
+            ifElseIndex = treeMap[i][0];
+            cout << "br label %endIfElse" << endl;
+            cout << endl;
+            cout << "inElse:" << endl;
 
         }
-        else if(treeMap[i][1]=="while"){
-
+        else if(treeMap[i][0]<ifElseIndex){
+            ifElseIndex = "0";
+            cout << "br label %endIfElse" << endl;
+            cout << endl;
+            cout << "endIfElse:" << endl;
+        }
+        else if(treeMap[i][0]<whileIndex){
+            whileIndex = "0";
+            cout << "br label %startWhile" << endl;
+            cout << endl;
+            cout << "endWhile:" << endl;
         }
         else if(treeMap[i][1]=="return"){
             int j;
