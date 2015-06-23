@@ -857,8 +857,6 @@ void llvm(){
         cout << "Fail to open file" << endl;
         exit(1);
     }
-
-
     string funcIndex = "0";
     string funcName;
     string funcType;
@@ -873,6 +871,8 @@ void llvm(){
 
     string ifElseIndex = "0";
     string whileIndex = "0";
+    int printInt = 0;
+    int printDou = 0;
 
     fllvm << "@.stri = private unnamed_addr constant[3 x i8] c\"%d\\00\"" << endl;
     fllvm << "@.strd = private unnamed_addr constant[4 x i8] c\"%lf\\00\"" << endl;
@@ -959,14 +959,32 @@ void llvm(){
                     int j;
                     if(treeMap[i-2][1]=="]"){
                         string size;
+                        string assType="i32";
                         assignTrg = treeMap[i-10][1] + treeMap[i-8][1] + treeMap[i-5][1] + treeMap[i-2][1];
                         assignVal = treeMap[i+3][1];
                         type = getType(i, i-10);
                         size = getSize(i, i-10);
+                        int tmpPar = 0;
                         fllvm << "%" << paraCnt << " = getelementptr inbounds [" + size + " x " + type + "]* %" + treeMap[i-10][1] + ", i32 0, i64 " + treeMap[i-5][1] << endl;
-                        fllvm << "store " + type + " " + assignVal + ", " + type + "* %" << paraCnt << endl;
+                        tmpPar = paraCnt;
                         paraCnt++;
-                        fllvm << "%" << paraCnt << " = load " + type + "* %" << paraCnt-1 << endl;
+                        for(int l=0; l<assignVal.length(); l++){
+                            if(assignVal[l]=='.'){
+                                assType="double";
+                            }
+                        }
+                        if(type=="i32" && assType=="double"){
+                            fllvm << "%" << paraCnt << " = fptosi double " << assignVal << " to i32" << endl;
+                            assignVal = "%" + itos(paraCnt);
+                            paraCnt++;
+                        }
+                        if(type=="double" && assType=="i32"){
+                            fllvm << "%" << paraCnt << " = sitofp i32 " + assignVal + " to double" << endl;
+                            assignVal = "%" + itos(paraCnt);
+                            paraCnt++;
+                        }
+                        fllvm << "store " + type + " " + assignVal + ", " + type + "* %" << tmpPar << endl;
+                        fllvm << "%" << paraCnt << " = load " + type + "* %" << tmpPar << endl;
                         paraList[paraCnt][0] = "%"+itos(paraCnt);
                         paraList[paraCnt][1] = assignTrg;
                         paraList[paraCnt][2] = type;
@@ -978,7 +996,25 @@ void llvm(){
                         assignTrg = treeMap[i-2][1];
                         assignVal = treeMap[i+3][1];
                         int j;
+                        string assType="i32";
+
                         type = getType(i, i-2);
+                        for(int l=0; l<assignVal.length(); l++){
+                            if(assignVal[l]=='.'){
+                                assType="double";
+                            }
+                        }
+                        if(type=="i32" && assType=="double"){
+                            fllvm << "%" << paraCnt << " = fptosi double " << assignVal << " to i32" << endl;
+                            assignVal = "%" + itos(paraCnt);
+                            paraCnt++;
+                        }
+                        if(type=="double" && assType=="i32"){
+                            fllvm << "%" << paraCnt << " = sitofp i32 " + assignVal + " to double" << endl;
+                            assignVal = "%" + itos(paraCnt);
+                            paraCnt++;
+                        }
+
                         for(j=0; j<scopeRow; j++){
                             if(scopeMap[j][1]==assignTrg)
                                 break;
@@ -1450,20 +1486,35 @@ void llvm(){
             }
             if(inParaList){
                 if(printType=="i32"){
+                    if(printInt==0){
+                        printInt==1;
+                        paraCnt++;
+                    }
                     fllvm << "call i32 (i8*, ...)* @printf(i8* getelementptr inbounds ([3 x i8]* @.stri, i32 0, i32 0), i32 " + printVal + ")" << endl;
                 }
                 else{
+                    if(printDou==0){
+                        printDou==1;
+                        paraCnt++;
+                    }
                     fllvm << "call i32 (i8*, ...)* @printf(i8* getelementptr inbounds ([4 x i8]* @.strd, i32 0, i32 0), double " + printVal + ")" << endl;
                 }
             }
             else{
                 if(printType=="i32"){
+                    if(printInt==0){
+                        printInt==1;
+                        paraCnt++;
+                    }
                     fllvm << "%" << paraCnt << " = load i32* %" + printVal << endl;
                     fllvm << "call i32 (i8*, ...)* @printf(i8* getelementptr inbounds ([3 x i8]* @.stri, i32 0, i32 0), i32 %" << paraCnt << ")" << endl;
                 }
                 else{
+                    if(printDou==0){
+                        printDou==1;
+                        paraCnt++;
+                    }
                     fllvm << "%" << paraCnt << " = load double* %" + printVal << endl;
-
                     fllvm << "call i32 (i8*, ...)* @printf(i8* getelementptr inbounds ([4 x i8]* @.strd, i32 0, i32 0), double %" << paraCnt << ")" << endl;
                 }
                 paraList[paraCnt][0] = "%"+itos(paraCnt);
@@ -1551,7 +1602,6 @@ void llvm(){
             paraCnt++;
         }
         else if(treeMap[i][1]=="else"){
-            paraCnt++;
             ifElseIndex = treeMap[i][0];
             fllvm << "br label %endIfElse" << endl;
             fllvm << endl;
