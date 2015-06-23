@@ -56,6 +56,7 @@ int mainCnt;
 int treeRow;
 int paraCnt;
 
+
 struct Tree
 {
     int index;       //the depth of the node
@@ -135,11 +136,11 @@ int main(){
         cout << endl;
     }
 
-
+/*
     int i;
     for(i=100; i<250; i++){
         cout << treeMap[i][0] << " " << treeMap[i][1] << " " << treeMap[i][2] << endl;
-    }
+    }*/
 }
 
 void readGrammer(){
@@ -850,6 +851,13 @@ void llvm(){
     int globle = 1;
     int isArray=0;
     int isNumAssign=0;
+    fstream fllvm;
+    fllvm.open("test.ll",ios::out);
+    if(!fllvm){
+        cout << "Fail to open file" << endl;
+        exit(1);
+    }
+
 
     string funcIndex = "0";
     string funcName;
@@ -866,9 +874,9 @@ void llvm(){
     string ifElseIndex = "0";
     string whileIndex = "0";
 
-    cout << "@.stri = private constant[4 x i8] c\"%d\\0A\\00\"" << endl;
-    cout << "@.strd = private constant[4 x i8] c\"%lf\\0A\\00\"" << endl;
-    cout << "declare i32 @printf(i8*, ...)" << endl;
+    fllvm << "@.stri = private unnamed_addr constant[3 x i8] c\"%d\\00\"" << endl;
+    fllvm << "@.strd = private unnamed_addr constant[4 x i8] c\"%lf\\00\"" << endl;
+    fllvm << "declare i32 @printf(i8*, ...)" << endl;
     for(i=0; i<treeRow; i++){
         if(treeMap[i][1]=="Type" && treeMap[i+5][1]=="FunDecl"){
             globle = 0;
@@ -876,21 +884,21 @@ void llvm(){
             funcType = treeMap[i+1][1];
             funcName = treeMap[i+3][1];
             if(funcType=="int"){
-                cout << "define i32 @" << funcName << "(){" << endl;
+                fllvm << "define i32 @" << funcName << "(){" << endl;
             }
             else if(funcType=="double"){
-                cout << "define double @" << funcName << "(){" << endl;
+                fllvm << "define double @" << funcName << "(){" << endl;
             }
             else{
-                cout << "err in into-func" << endl;
+                fllvm << "err in into-func" << endl;
             }
             i=i+5;
         }
         else if(treeMap[i][0]==funcIndex){
             globle = 1;
             funcIndex = "0";
-            cout << "}" << endl;
-            cout << endl;
+            fllvm << "}" << endl;
+            fllvm << endl;
         }
         else if(treeMap[i][1]=="Type" && treeMap[i+5][1]!="FunDecl"){
             declareType=treeMap[i+1][1];
@@ -908,36 +916,36 @@ void llvm(){
             if(globle){
                 if(isArray){
                     if(declareType=="int"){
-                        cout << "@" + declareName + "= global [" + arraySize + " x i32 0]" << endl;
+                        fllvm << "@" + declareName + "= global [" + arraySize + " x i32 0]" << endl;
                     }
                     else{
-                        cout << "@" + declareName + "= global [" + arraySize + " x double 0]" << endl;
+                        fllvm << "@" + declareName + "= global [" + arraySize + " x double 0]" << endl;
                     }
                 }
                 else{
                     if(declareType=="int"){
-                        cout << "@" + declareName + "= global i32 0" << endl;
+                        fllvm << "@" + declareName + "= global i32 0" << endl;
                     }
                     else{
-                        cout << "@" + declareName + "= global double 0" << endl;
+                        fllvm << "@" + declareName + "= global double 0" << endl;
                     }
                 }
             }
             else{
                 if(isArray){
                     if(declareType=="int"){
-                        cout << "%" + declareName + "= alloca [" + arraySize + " x i32]" << endl;
+                        fllvm << "%" + declareName + "= alloca [" + arraySize + " x i32]" << endl;
                     }
                     else{
-                        cout << "%" + declareName + "= alloca [" + arraySize + " x double]" << endl;
+                        fllvm << "%" + declareName + "= alloca [" + arraySize + " x double]" << endl;
                     }
                 }
                 else{
                     if(declareType=="int"){
-                        cout << "%" + declareName + "= alloca i32" << endl;
+                        fllvm << "%" + declareName + "= alloca i32" << endl;
                     }
                     else{
-                        cout << "%" + declareName + "= alloca double" << endl;
+                        fllvm << "%" + declareName + "= alloca double" << endl;
                     }
                 }
             }
@@ -955,8 +963,10 @@ void llvm(){
                         assignVal = treeMap[i+3][1];
                         type = getType(i, i-10);
                         size = getSize(i, i-10);
-                        cout << "%" << paraCnt << " = getelementptr inbounds [" + size + " x " + type + "]* %" + treeMap[i-10][1] + ", i32 0, i64 " + treeMap[i-5][1] << endl;
-                        cout << "store " + type + " " + assignVal + ", " + type + "* %" << paraCnt << endl;
+                        fllvm << "%" << paraCnt << " = getelementptr inbounds [" + size + " x " + type + "]* %" + treeMap[i-10][1] + ", i32 0, i64 " + treeMap[i-5][1] << endl;
+                        fllvm << "store " + type + " " + assignVal + ", " + type + "* %" << paraCnt << endl;
+                        paraCnt++;
+                        fllvm << "%" << paraCnt << " = load " + type + "* %" << paraCnt-1 << endl;
                         paraList[paraCnt][0] = "%"+itos(paraCnt);
                         paraList[paraCnt][1] = assignTrg;
                         paraList[paraCnt][2] = type;
@@ -969,13 +979,17 @@ void llvm(){
                         assignVal = treeMap[i+3][1];
                         int j;
                         type = getType(i, i-2);
+                        for(j=0; j<scopeRow; j++){
+                            if(scopeMap[j][1]==assignTrg)
+                                break;
+                        }
                         if(scopeMap[j][0]=="0"){
-                            cout << "store " + type + " " + assignVal + ", " + type + "* @" + assignTrg << endl;
-                            cout << "%" << paraCnt << " = load " + type + "* @" + assignTrg << endl;
+                            fllvm << "store " + type + " " + assignVal + ", " + type + "* @" + assignTrg << endl;
+                            fllvm << "%" << paraCnt << " = load " + type + "* @" + assignTrg << endl;
                         }
                         else{
-                            cout << "store " + type + " " + assignVal + ", " + type + "* %" + assignTrg << endl;
-                            cout << "%" << paraCnt << " = load " + type + "* %" + assignTrg << endl;
+                            fllvm << "store " + type + " " + assignVal + ", " + type + "* %" + assignTrg << endl;
+                            fllvm << "%" << paraCnt << " = load " + type + "* %" + assignTrg << endl;
                         }
                         paraList[paraCnt][0] = "%"+itos(paraCnt);
                         paraList[paraCnt][1] = assignTrg;
@@ -1027,12 +1041,12 @@ void llvm(){
 
                         type = getType(i, i-2);
                         if(scopeMap[j][0]=="0"){
-                            cout << "store " + type + " %" << par << ", " + type + "* @" + assignTrg << endl;
-                            cout << "%" << paraCnt << " = load " + type + "* @" + assignTrg << endl;
+                            fllvm << "store " + type + " %" << par << ", " + type + "* @" + assignTrg << endl;
+                            fllvm << "%" << paraCnt << " = load " + type + "* @" + assignTrg << endl;
                         }
                         else{
-                            cout << "store " + type + " %" << par << ", " + type + "* %" + assignTrg << endl;
-                            cout << "%" << paraCnt << " = load " + type + "* %" + assignTrg << endl;
+                            fllvm << "store " + type + " %" << par << ", " + type + "* %" + assignTrg << endl;
+                            fllvm << "%" << paraCnt << " = load " + type + "* %" + assignTrg << endl;
                         }
                         paraList[paraCnt][0] = "%"+itos(paraCnt);
                         paraList[paraCnt][1] = assignTrg;
@@ -1051,7 +1065,7 @@ void llvm(){
                     assignTrg = treeMap[i-10][1] + treeMap[i-8][1] + treeMap[i-5][1] + treeMap[i-2][1];
                     type = getType(i, i-10);
                     size = getSize(i, i-10);
-                    cout << "%" << paraCnt << " = getelementptr inbounds [" + size + " x " + type + "]* %" + treeMap[i-10][1] + ", i32 0, i64 " + treeMap[i-5][1] << endl;
+                    fllvm << "%" << paraCnt << " = getelementptr inbounds [" + size + " x " + type + "]* %" + treeMap[i-10][1] + ", i32 0, i64 " + treeMap[i-5][1] << endl;
                     paraList[paraCnt][0] = "%"+itos(paraCnt);
                     paraList[paraCnt][1] = assignTrg;
                     paraList[paraCnt][2] = type;
@@ -1063,56 +1077,62 @@ void llvm(){
                     type = getType(i, i-2);
                 }
 
-                for(k=0; k<paraCnt; k++){
-                    if(assignTrg==paraList[k][1]){
-                        inpar = 1;
-                        assignTrg = paraList[k][0];
-                        break;
-                    }
-                }
-
                 assignVal = treeMap[i+3][1] + "()";
-                cout << "%" << paraCnt << " = call " + type + " @" + assignVal << endl;
-                if(inpar){
-                    cout << "store " + type + " %" << paraCnt << ", " + type + " " + assignTrg << endl;
+                fllvm << "%" << paraCnt << " = call " + type + " @" + assignVal << endl;
+
+                for(j=0; j<scopeRow; j++){
+                    if(scopeMap[j][1]==assignTrg)
+                        break;
+                }
+                if(scopeMap[j][0]=="0"){
+                    fllvm << "store " + type + " %" << paraCnt << ", " + type + "* @" + assignTrg << endl;
+                    paraCnt++;
+                    fllvm << "%" << paraCnt << " = load " + type + "* @" + assignTrg << endl;
                 }
                 else{
-                    cout << "store " + type + " %" << paraCnt << ", " + type + "* %" + assignTrg << endl;
+                    fllvm << "store " + type + " %" << paraCnt << ", " + type + "* %" + assignTrg << endl;
+                    paraCnt++;
+                    fllvm << "%" << paraCnt << " = load " + type + "* %" + assignTrg << endl;
                 }
+                paraList[paraCnt][0] = "%"+itos(paraCnt);
+                paraList[paraCnt][1] = assignTrg;
+                paraList[paraCnt][2] = type;
+                paraList[paraCnt][3] = assignVal;
                 paraCnt++;
+
+
             }
-            else{
+            else{ //calculus
                 int tmp = i+1;
                 int j, k, par;
                 int calCnt = 0;
                 int inpar=0;
+                int isArr=0;
+                int paArr=0;
                 string calculus[32]={};
                 string left;
                 string right;
+                string leftType="";
+                string rightType="";
+
                 string size;
                 //array = id + num...
                 if(treeMap[i-2][1]=="]"){
-                    assignTrg = treeMap[i-10][1] + treeMap[i-8][1] + treeMap[i-5][1] + treeMap[i-2][1];
+                    isArr = 1;
                     type = getType(i, i-10);
                     size = getSize(i, i-10);
-                    cout << "%" << paraCnt << " = getelementptr inbounds [" + size + " x " + type + "]* %" + treeMap[i-10][1] + ", i32 0, i64 " + treeMap[i-5][1] << endl;
+                    fllvm << "%" << paraCnt << " = getelementptr inbounds [" + size + " x " + type + "]* %" + treeMap[i-10][1] + ", i32 0, i64 " + treeMap[i-5][1] << endl;
                     paraList[paraCnt][0] = "%"+itos(paraCnt);
-                    paraList[paraCnt][1] = assignTrg;
+                    paraList[paraCnt][1] = treeMap[i-10][1] + treeMap[i-8][1] + treeMap[i-5][1] + treeMap[i-2][1];
                     paraList[paraCnt][2] = type;
+                    assignTrg = paraList[paraCnt][0];
+                    paArr = paraCnt;
                     paraCnt++;
                 }
                 //id = id + num + array...
                 else{
                     assignTrg = treeMap[i-2][1];
                     type = getType(i, i-2);
-                }
-
-                for(k=0; k<paraCnt; k++){
-                    if(assignTrg==paraList[k][1]){
-                        inpar = 1;
-                        assignTrg = paraList[k][0];
-                        break;
-                    }
                 }
 
                 while(treeMap[i][0]<=treeMap[tmp][0]){
@@ -1133,41 +1153,9 @@ void llvm(){
                 for(j=0; j<calCnt; j++){
                     if(calculus[j]=="*" || calculus[j]=="/"){
                             int r=1, s=1;
-                            while(calculus[j-r]=="space"){
-                                r++;
-                            }
-                            left=calculus[j-r];
-                            while(calculus[j+s]=="space"){
-                                s++;
-                            }
-                            right=calculus[j+s];
+                            leftType = "null";
+                            rightType = "null";
 
-                            for(k=0; k<paraCnt; k++){
-                                if(left==paraList[k][1] && paraList[k][4]<=treeMap[i][2]){
-                                    left = paraList[k][0];
-                                }
-                                if(right==paraList[k][1] && paraList[k][4]<=treeMap[i][2]){
-                                    right = paraList[k][0];
-                                }
-                            }
-                            if(calculus[j]=="*"){
-                                cout << "%" << paraCnt << " = mul " + type + " " + left + ", " + right << endl;
-                            }
-                            else{
-                                //division
-                                cout << "%" << paraCnt << " = mul " + type + " " + left + ", " + right << endl;
-                            }
-                            calculus[j] = "%"+itos(paraCnt);
-                            calculus[j-r] = "space";
-                            calculus[j+s] = "space";
-                            paraList[paraCnt][0] = calculus[j];
-                            paraList[paraCnt][1] = calculus[j];
-                            paraCnt++;
-                    }
-                }
-                for(j=0; j<calCnt; j++){
-                    if(calculus[j]=="+" || calculus[j]=="-"){
-                            int r=1, s=1;
                             while(calculus[j-r]=="space"){
                                 r++;
                             }
@@ -1180,16 +1168,110 @@ void llvm(){
                             for(k=0; k<paraCnt; k++){
                                 if(left==paraList[k][1]){
                                     left = paraList[k][0];
+                                    leftType = paraList[k][2];
                                 }
                                 if(right==paraList[k][1]){
                                     right = paraList[k][0];
+                                    rightType = paraList[k][2];
                                 }
                             }
-                            if(calculus[j]=="+"){
-                                cout << "%" << paraCnt << " = add " + type + " " + left + ", " + right << endl;
+
+                            if(leftType=="null"){
+                                leftType = "i32";
+                                for(int l=0; l<left.length(); l++){
+                                    if(left[l]=='.')
+                                        leftType = "double";
+                                }
+                            }
+                            if(rightType=="null"){
+                                rightType = "i32";
+                                for(int l=0; l<right.length(); l++){
+                                    if(right[l]=='.')
+                                        rightType = "double";
+                                }
+                            }
+
+                            if(calculus[j]=="*"){
+                                if(type=="i32"){
+                                    if(leftType=="i32" && rightType=="double"){
+                                        fllvm << "%" << paraCnt << " = sitofp i32 " + left + " to double" << endl;
+                                        left = "%"+itos(paraCnt);
+                                        paraCnt++;
+                                        fllvm << "%" << paraCnt << " = fmul double " + left + ", " + right << endl;
+                                        paraCnt++;
+                                        fllvm << "%" << paraCnt << " = fptosi double %" << paraCnt-1 << " to i32" << endl;
+                                    }
+                                    else if(leftType=="double" && rightType=="i32"){
+                                        fllvm << "%" << paraCnt << " = sitofp i32 " + right + " to double" << endl;
+                                        right = "%"+itos(paraCnt);
+                                        paraCnt++;
+                                        fllvm << "%" << paraCnt << " = fmul double " + left + ", " + right << endl;
+                                        paraCnt++;
+                                        fllvm << "%" << paraCnt << " = fptosi double %" << paraCnt-1 << " to i32" << endl;
+                                    }
+                                    else if(leftType=="i32" && rightType=="double"){
+                                        fllvm << "%" << paraCnt << " = fmul double " + left + ", " + right << endl;
+                                        paraCnt++;
+                                        fllvm << "%" << paraCnt << " = fptosi double %" << paraCnt-1 << " to i32" << endl;
+                                    }
+                                    else{
+                                        fllvm << "%" << paraCnt << " = mul i32 " + left + ", " + right << endl;
+                                    }
+                                }
+                                else{
+                                    if(leftType=="i32"){
+                                        fllvm << "%" << paraCnt << " = sitofp i32 " + left + " to double" << endl;
+                                        left = "%"+itos(paraCnt);
+                                        paraCnt++;
+                                    }
+                                    if(rightType=="i32"){
+                                        fllvm << "%" << paraCnt << " = sitofp i32 " + right + " to double" << endl;
+                                        right = "%"+itos(paraCnt);
+                                        paraCnt++;
+                                    }
+                                    fllvm << "%" << paraCnt << " = fmul double " + left + ", " + right << endl;
+                                }
                             }
                             else{
-                                cout << "%" << paraCnt << " = sub " + type + " " + left + ", " + right << endl;
+                                if(type=="i32"){
+                                    if(leftType=="i32" && rightType=="double"){
+                                        fllvm << "%" << paraCnt << " = sitofp i32 " + left + " to double" << endl;
+                                        left = "%"+itos(paraCnt);
+                                        paraCnt++;
+                                        fllvm << "%" << paraCnt << " = fdiv double " + left + ", " + right << endl;
+                                        paraCnt++;
+                                        fllvm << "%" << paraCnt << " = fptosi double %" << paraCnt-1 << " to i32" << endl;
+                                    }
+                                    else if(leftType=="double" && rightType=="i32"){
+                                        fllvm << "%" << paraCnt << " = sitofp i32 " + right + " to double" << endl;
+                                        right = "%"+itos(paraCnt);
+                                        paraCnt++;
+                                        fllvm << "%" << paraCnt << " = fdiv double " + left + ", " + right << endl;
+                                        paraCnt++;
+                                        fllvm << "%" << paraCnt << " = fptosi double %" << paraCnt-1 << " to i32" << endl;
+                                    }
+                                    else if(leftType=="i32" && rightType=="double"){
+                                        fllvm << "%" << paraCnt << " = fdiv double " + left + ", " + right << endl;
+                                        paraCnt++;
+                                        fllvm << "%" << paraCnt << " = fptosi double %" << paraCnt-1 << " to i32" << endl;
+                                    }
+                                    else{
+                                        fllvm << "%" << paraCnt << " = sdiv i32 " + left + ", " + right << endl;
+                                    }
+                                }
+                                else{
+                                    if(leftType=="i32"){
+                                        fllvm << "%" << paraCnt << " = sitofp i32 " + left + " to double" << endl;
+                                        left = "%"+itos(paraCnt);
+                                        paraCnt++;
+                                    }
+                                    if(rightType=="i32"){
+                                        fllvm << "%" << paraCnt << " = sitofp i32 " + right + " to double" << endl;
+                                        right = "%"+itos(paraCnt);
+                                        paraCnt++;
+                                    }
+                                    fllvm << "%" << paraCnt << " = fdiv double " + left + ", " + right << endl;
+                                }
                             }
                             calculus[j] = "%"+itos(paraCnt);
                             calculus[j-r] = "space";
@@ -1198,11 +1280,160 @@ void llvm(){
                             paraCnt++;
                     }
                 }
-                if(inpar){
-                    cout << "store " + type + " " + assignVal + ", " + type + " " + assignTrg << endl;
+                for(j=0; j<calCnt; j++){
+                    if(calculus[j]=="+" || calculus[j]=="-"){
+                            int r=1, s=1;
+                            leftType = "null";
+                            rightType = "null";
+
+                            while(calculus[j-r]=="space"){
+                                r++;
+                            }
+                            left=calculus[j-r];
+                            while(calculus[j+s]=="space"){
+                                s++;
+                            }
+                            right=calculus[j+s];
+
+                            for(k=0; k<paraCnt; k++){
+                                if(left==paraList[k][1]){
+                                    left = paraList[k][0];
+                                    leftType = paraList[k][2];
+                                }
+                                if(right==paraList[k][1]){
+                                    right = paraList[k][0];
+                                    rightType = paraList[k][2];
+                                }
+                            }
+
+                            if(leftType=="null"){
+                                leftType = "i32";
+                                for(int l=0; l<left.length(); l++){
+                                    if(left[l]=='.')
+                                        leftType = "double";
+                                }
+                            }
+                            if(rightType=="null"){
+                                rightType = "i32";
+                                for(int l=0; l<right.length(); l++){
+                                    if(right[l]=='.')
+                                        rightType = "double";
+                                }
+                            }
+
+                            if(calculus[j]=="+"){
+                                if(type=="i32"){
+                                    if(leftType=="i32" && rightType=="double"){
+                                        fllvm << "%" << paraCnt << " = sitofp i32 " + left + " to double" << endl;
+                                        left = "%"+itos(paraCnt);
+                                        paraCnt++;
+                                        fllvm << "%" << paraCnt << " = fadd double " + left + ", " + right << endl;
+                                        paraCnt++;
+                                        fllvm << "%" << paraCnt << " = fptosi double %" << paraCnt-1 << " to i32" << endl;
+                                    }
+                                    else if(leftType=="double" && rightType=="i32"){
+                                        fllvm << "%" << paraCnt << " = sitofp i32 " + right + " to double" << endl;
+                                        right = "%"+itos(paraCnt);
+                                        paraCnt++;
+                                        fllvm << "%" << paraCnt << " = fadd double " + left + ", " + right << endl;
+                                        paraCnt++;
+                                        fllvm << "%" << paraCnt << " = fptosi double %" << paraCnt-1 << " to i32" << endl;
+                                    }
+                                    else if(leftType=="i32" && rightType=="double"){
+                                        fllvm << "%" << paraCnt << " = fadd double " + left + ", " + right << endl;
+                                        paraCnt++;
+                                        fllvm << "%" << paraCnt << " = fptosi double %" << paraCnt-1 << " to i32" << endl;
+                                    }
+                                    else{
+                                        fllvm << "%" << paraCnt << " = add i32 " + left + ", " + right << endl;
+                                    }
+                                }
+                                else{
+                                    if(leftType=="i32"){
+                                        fllvm << "%" << paraCnt << " = sitofp i32 " + left + " to double" << endl;
+                                        left = "%"+itos(paraCnt);
+                                        paraCnt++;
+                                    }
+                                    if(rightType=="i32"){
+                                        fllvm << "%" << paraCnt << " = sitofp i32 " + right + " to double" << endl;
+                                        right = "%"+itos(paraCnt);
+                                        paraCnt++;
+                                    }
+                                    fllvm << "%" << paraCnt << " = fadd double " + left + ", " + right << endl;
+                                }
+                            }
+                            else{
+                                if(type=="i32"){
+                                    if(leftType=="i32" && rightType=="double"){
+                                        fllvm << "%" << paraCnt << " = sitofp i32 " + left + " to double" << endl;
+                                        left = "%"+itos(paraCnt);
+                                        paraCnt++;
+                                        fllvm << "%" << paraCnt << " = fsub double " + left + ", " + right << endl;
+                                        paraCnt++;
+                                        fllvm << "%" << paraCnt << " = fptosi double %" << paraCnt-1 << " to i32" << endl;
+                                    }
+                                    else if(leftType=="double" && rightType=="i32"){
+                                        fllvm << "%" << paraCnt << " = sitofp i32 " + right + " to double" << endl;
+                                        right = "%"+itos(paraCnt);
+                                        paraCnt++;
+                                        fllvm << "%" << paraCnt << " = fsub double " + left + ", " + right << endl;
+                                        paraCnt++;
+                                        fllvm << "%" << paraCnt << " = fptosi double %" << paraCnt-1 << " to i32" << endl;
+                                    }
+                                    else if(leftType=="i32" && rightType=="double"){
+                                        fllvm << "%" << paraCnt << " = fsub double " + left + ", " + right << endl;
+                                        paraCnt++;
+                                        fllvm << "%" << paraCnt << " = fptosi double %" << paraCnt-1 << " to i32" << endl;
+                                    }
+                                    else{
+                                        fllvm << "%" << paraCnt << " = sub i32 " + left + ", " + right << endl;
+                                    }
+                                }
+                                else{
+                                    if(leftType=="i32"){
+                                        fllvm << "%" << paraCnt << " = sitofp i32 " + left + " to double" << endl;
+                                        left = "%"+itos(paraCnt);
+                                        paraCnt++;
+                                    }
+                                    if(rightType=="i32"){
+                                        fllvm << "%" << paraCnt << " = sitofp i32 " + right + " to double" << endl;
+                                        right = "%"+itos(paraCnt);
+                                        paraCnt++;
+                                    }
+                                    fllvm << "%" << paraCnt << " = fsub double " + left + ", " + right << endl;
+                                }
+                            }
+                            calculus[j] = "%"+itos(paraCnt);
+                            calculus[j-r] = "space";
+                            calculus[j+s] = "space";
+                            assignVal = calculus[j];
+                            paraCnt++;
+                    }
+                }
+                for(j=0; j<scopeRow; j++){
+                    if(scopeMap[j][1]==assignTrg)
+                        break;
+                }
+                if(isArr){
+                        fllvm << "store " + type + " " << assignVal << ", " + type + "* " + assignTrg << endl;
+                        fllvm << "%" << paraCnt << " = load " + type + "* " + assignTrg << endl;
+                        paraList[paArr][0] = "%"+itos(paraCnt);
+                        paraCnt++;
                 }
                 else{
-                    cout << "store " + type + " " + assignVal + ", " + type + "* %" + assignTrg << endl;
+                    if(scopeMap[j][0]=="0"){
+                            fllvm << "store " + type + " " << assignVal << ", " + type + "* @" + assignTrg << endl;
+                            fllvm << "%" << paraCnt << " = load " + type + "* @" + assignTrg << endl;
+                    }
+                    else{
+                        fllvm << "store " + type + " " << assignVal << ", " + type + "* %" + assignTrg << endl;
+                        fllvm << "%" << paraCnt << " = load " + type + "* %" + assignTrg << endl;
+                    }
+                    paraList[paraCnt][0] = "%"+itos(paraCnt);
+                    paraList[paraCnt][1] = assignTrg;
+                    paraList[paraCnt][2] = type;
+                    paraList[paraCnt][3] = assignVal;
+                    paraCnt++;
                 }
             }
         }
@@ -1211,7 +1442,7 @@ void llvm(){
             int inParaList=0;
             printVal = treeMap[i+2][1];
             printType = getType(i, i+2);
-            for(j=0; j<paraCnt; j++){
+            for(j=paraCnt; j>=0; j--){
                 if(paraList[j][1]==printVal){
                     inParaList = 1;
                     printVal = paraList[j][0];
@@ -1219,21 +1450,21 @@ void llvm(){
             }
             if(inParaList){
                 if(printType=="i32"){
-                    cout << "call i32 (i8*, ...)* @printf(i8* getelementptr inbounds ([4 x i8]* @.stri, i32 0, i32 0), i32 " + printVal + ")" << endl;
+                    fllvm << "call i32 (i8*, ...)* @printf(i8* getelementptr inbounds ([3 x i8]* @.stri, i32 0, i32 0), i32 " + printVal + ")" << endl;
                 }
                 else{
-                    cout << "call i32 (i8*, ...)* @printf(i8* getelementptr inbounds ([4 x i8]* @.strd, i32 0, i32 0), double " + printVal + ")" << endl;
+                    fllvm << "call i32 (i8*, ...)* @printf(i8* getelementptr inbounds ([4 x i8]* @.strd, i32 0, i32 0), double " + printVal + ")" << endl;
                 }
             }
             else{
                 if(printType=="i32"){
-                    cout << "%" << paraCnt << " = load i32* %" + printVal << endl;
-                    cout << "call i32 (i8*, ...)* @printf(i8* getelementptr inbounds ([4 x i8]* @.stri, i32 0, i32 0), i32 %" << paraCnt << ")" << endl;
+                    fllvm << "%" << paraCnt << " = load i32* %" + printVal << endl;
+                    fllvm << "call i32 (i8*, ...)* @printf(i8* getelementptr inbounds ([3 x i8]* @.stri, i32 0, i32 0), i32 %" << paraCnt << ")" << endl;
                 }
                 else{
-                    cout << "%" << paraCnt << " = load double* %" + printVal << endl;
+                    fllvm << "%" << paraCnt << " = load double* %" + printVal << endl;
 
-                    cout << "call i32 (i8*, ...)* @printf(i8* getelementptr inbounds ([4 x i8]* @.strd, i32 0, i32 0), double %" << paraCnt << ")" << endl;
+                    fllvm << "call i32 (i8*, ...)* @printf(i8* getelementptr inbounds ([4 x i8]* @.strd, i32 0, i32 0), double %" << paraCnt << ")" << endl;
                 }
                 paraList[paraCnt][0] = "%"+itos(paraCnt);
                 paraList[paraCnt][1] = printVal;
@@ -1258,7 +1489,7 @@ void llvm(){
                     }
                 }
                 if(inParaListL==0){
-                    cout << "%" << paraCnt <<" = load " + type + "* %" + cmpLeft << endl;
+                    fllvm << "%" << paraCnt <<" = load " + type + "* %" + cmpLeft << endl;
                     paraList[paraCnt][0] = "%"+itos(paraCnt);
                     paraList[paraCnt][1] = cmpLeft;
                     paraList[paraCnt][2] = type;
@@ -1274,7 +1505,7 @@ void llvm(){
                     }
                 }
                 if(inParaListL==0){
-                    cout << "%" << paraCnt <<" = load " + type + "* %" + cmpRight << endl;
+                    fllvm << "%" << paraCnt <<" = load " + type + "* %" + cmpRight << endl;
                     paraList[paraCnt][0] = "%"+itos(paraCnt);
                     paraList[paraCnt][1] = cmpRight;
                     paraList[paraCnt][2] = type;
@@ -1285,58 +1516,59 @@ void llvm(){
 
             if(treeMap[i][1]=="while"){ //while
                 whileIndex = treeMap[i][0];
-                cout << "startWhile:" << endl;
-                cout << "br i1 %" << paraCnt << ", label %inWhile, label %endWhile" << endl;
-                cout << endl;
-                cout << "inWhile:" << endl;
+                fllvm << "startWhile:" << endl;
+                fllvm << "br i1 %" << paraCnt << ", label %inWhile, label %endWhile" << endl;
+                fllvm << endl;
+                fllvm << "inWhile:" << endl;
             }
 
             if(oper=="=="){
-                cout << "%" << paraCnt << " = icmp eq " + type + " " + cmpLeft + ", " + cmpRight << endl;
+                fllvm << "%" << paraCnt << " = icmp eq " + type + " " + cmpLeft + ", " + cmpRight << endl;
             }
             else if(oper=="!="){
-                cout << "%" << paraCnt << " = icmp be " + type + " " + cmpLeft + ", " + cmpRight << endl;
+                fllvm << "%" << paraCnt << " = icmp be " + type + " " + cmpLeft + ", " + cmpRight << endl;
             }
             else if(oper==">="){
-                cout << "%" << paraCnt << " = icmp sge " + type + " " + cmpLeft + ", " + cmpRight << endl;
+                fllvm << "%" << paraCnt << " = icmp sge " + type + " " + cmpLeft + ", " + cmpRight << endl;
             }
             else if(oper=="<="){
-                cout << "%" << paraCnt << " = icmp sle " + type + " " + cmpLeft + ", " + cmpRight << endl;
+                fllvm << "%" << paraCnt << " = icmp sle " + type + " " + cmpLeft + ", " + cmpRight << endl;
             }
             else if(oper==">"){
-                cout << "%" << paraCnt << " = icmp sgt " + type + " " + cmpLeft + ", " + cmpRight << endl;
+                fllvm << "%" << paraCnt << " = icmp sgt " + type + " " + cmpLeft + ", " + cmpRight << endl;
             }
             else if(oper=="<"){
-                cout << "%" << paraCnt << " = icmp slt " + type + " " + cmpLeft + ", " + cmpRight << endl;
+                fllvm << "%" << paraCnt << " = icmp slt " + type + " " + cmpLeft + ", " + cmpRight << endl;
             }
 
             if(treeMap[i][1]=="if"){
-                cout << "br i1 %" << paraCnt << ", label %inIf, label %inElse" << endl;
-                cout << endl;
-                cout << "inIf:" << endl;
+                fllvm << "br i1 %" << paraCnt << ", label %inIf, label %inElse" << endl;
+                fllvm << endl;
+                fllvm << "inIf:" << endl;
 
             }
 
             paraCnt++;
         }
         else if(treeMap[i][1]=="else"){
+            paraCnt++;
             ifElseIndex = treeMap[i][0];
-            cout << "br label %endIfElse" << endl;
-            cout << endl;
-            cout << "inElse:" << endl;
+            fllvm << "br label %endIfElse" << endl;
+            fllvm << endl;
+            fllvm << "inElse:" << endl;
 
         }
         else if(treeMap[i][0]<ifElseIndex){
             ifElseIndex = "0";
-            cout << "br label %endIfElse" << endl;
-            cout << endl;
-            cout << "endIfElse:" << endl;
+            fllvm << "br label %endIfElse" << endl;
+            fllvm << endl;
+            fllvm << "endIfElse:" << endl;
         }
         else if(treeMap[i][0]<whileIndex){
             whileIndex = "0";
-            cout << "br label %startWhile" << endl;
-            cout << endl;
-            cout << "endWhile:" << endl;
+            fllvm << "br label %startWhile" << endl;
+            fllvm << endl;
+            fllvm << "endWhile:" << endl;
         }
         else if(treeMap[i][1]=="return"){
             int j;
@@ -1353,10 +1585,10 @@ void llvm(){
                     }
                 }
                 if(isDouble){
-                    cout << "ret double " + num << endl;
+                    fllvm << "ret double " + num << endl;
                 }
                 else{
-                    cout << "ret i32 " + num << endl;
+                    fllvm << "ret i32 " + num << endl;
                 }
             }
             else{
@@ -1379,21 +1611,21 @@ void llvm(){
                 }
                 if(inParaList){
                     if(retType=="i32"){
-                        cout << "ret i32 " + retVal << endl;
+                        fllvm << "ret i32 " + retVal << endl;
                     }
                     else{
-                        cout << "ret double " + retVal << endl;
+                        fllvm << "ret double " + retVal << endl;
                     }
                 }
                 else{
                     if(retType=="i32"){
-                        cout << "%" << paraCnt << " = load i32* %" + retVal << endl;
-                        cout << "ret i32 %" + retVal << endl;
+                        fllvm << "%" << paraCnt << " = load i32* %" + retVal << endl;
+                        fllvm << "ret i32 %" + retVal << endl;
                     }
                     else{
-                        cout << "%" << paraCnt << " = load double* %" + retVal << endl;
+                        fllvm << "%" << paraCnt << " = load double* %" + retVal << endl;
 
-                        cout << "ret double %" + retVal << endl;
+                        fllvm << "ret double %" + retVal << endl;
                     }
                     paraList[paraCnt][0] = "%"+itos(paraCnt);
                     paraList[paraCnt][1] = retVal;
@@ -1403,6 +1635,7 @@ void llvm(){
             }
         }
     }
+    fllvm.close();
 }
 
 string getType(int i, int k){
