@@ -135,7 +135,6 @@ int main(){
         }
         cout << endl;
     }
-
 /*
     int i;
     for(i=100; i<250; i++){
@@ -146,7 +145,7 @@ int main(){
 void readGrammer(){
 
     char line[128];
-    memset(line, '\0', sizeof(128));
+    memset(line, '\0', sizeof(char) * 128);
     fstream fr;
     int col=0;
     int gRow=0, gCol=0;
@@ -173,7 +172,7 @@ void readGrammer(){
         col=0;
         gRow++;
         gCol=0;
-        memset(line, '\0', sizeof(line));
+        memset(line, '\0', sizeof(char) * 128);
     }
     grammerRow = gRow;
     fr.close();
@@ -844,6 +843,7 @@ void printToFile(){
         }
         fw << endl;
     }
+    fw.close();
 }
 
 void llvm(){
@@ -880,21 +880,62 @@ void llvm(){
     for(i=0; i<treeRow; i++){
         if(treeMap[i][1]=="Type" && treeMap[i+5][1]=="FunDecl"){
             globle = 0;
+            paraCnt = 1;
             funcIndex = treeMap[i][0];
             funcType = treeMap[i+1][1];
             funcName = treeMap[i+3][1];
-            if(funcType=="int"){
-                fllvm << "define i32 @" << funcName << "(){" << endl;
-            }
-            else if(funcType=="double"){
-                fllvm << "define double @" << funcName << "(){" << endl;
+
+            if(treeMap[i+9][1]!=")"){
+                 int funcParNum = 0;
+                 int k;
+                 int tmp = 8;
+                 string funcParType[16]={};
+                 string funcParArr[16]={};
+                 if(funcType=="int"){
+                    fllvm << "define i32 @" << funcName << "( ";
+                }
+                else if(funcType=="double"){
+                    fllvm << "define double @" << funcName << "( ";
+                }
+
+                 while(atoi(treeMap[i+tmp][0].c_str()) > atoi(treeMap[i+6][0].c_str())){
+                    if(treeMap[i+tmp][1]=="id"){
+                        funcParType[funcParNum] = getType(i+tmp+1,i+tmp+1);
+                        funcParArr[funcParNum] = treeMap[i+tmp+1][1];
+                        funcParNum++;
+                    }
+                    tmp=tmp+1;
+                }
+                fllvm << funcParType[0] << " %" << funcParArr[0] << " ";
+                for(k=1; k<funcParNum; k++){
+                    fllvm << ", " << funcParType[k] << " %" << funcParArr[k];
+                }
+                fllvm << "){" << endl;
+                for(k=0; k<funcParNum; k++){
+                    fllvm << "%" << paraCnt << " = alloca " << funcParType[k] << endl;
+                    fllvm << "store " << funcParType[k] << " %" + funcParArr[k] + ", " + funcParType[k] + "* %" << paraCnt << endl;
+                    paraCnt++;
+                    fllvm << "%" << paraCnt << " = load " + funcParType[k] + "* %" << paraCnt-1 << endl;
+                    paraList[paraCnt][0] = "%"+itos(paraCnt);
+                    paraList[paraCnt][1] = funcParArr[k];
+                    paraList[paraCnt][2] = funcParType[k];
+                    paraCnt++;
+                }
+                i = i+tmp;
             }
             else{
-                fllvm << "err in into-func" << endl;
+                if(funcType=="int"){
+                    fllvm << "define i32 @" << funcName << "(){" << endl;
+                }
+                else if(funcType=="double"){
+                    fllvm << "define double @" << funcName << "(){" << endl;
+                }
+                else{
+                    fllvm << "err in into-func" << endl;
+                }
             }
-            i=i+5;
         }
-        else if(treeMap[i][0]==funcIndex){
+        else if(atoi(treeMap[i][0].c_str())<atoi(funcIndex.c_str())){
             globle = 1;
             funcIndex = "0";
             fllvm << "}" << endl;
@@ -948,6 +989,49 @@ void llvm(){
                         fllvm << "%" + declareName + "= alloca double" << endl;
                     }
                 }
+            }
+        }
+        else if(treeMap[i][1]=="Stmt" && treeMap[i+1][1]=="Expr" && treeMap[i+5][1]=="("){
+            string funcName = treeMap[i+3][1];
+            string type = getType(i+3, i+3);
+            string pushType[16]={};
+            string pushParaArr[16]={};
+            int pushParaNum = 0;
+            int k=0;
+            int tmp=5;
+            if(treeMap[i+8][1]==")"){
+                fllvm << "%" << paraCnt << " = call " + type + " @" + funcName + "( )" << endl;
+                paraCnt++;
+            }
+            else{
+
+                while(atoi(treeMap[i+tmp][0].c_str())>atoi(treeMap[i][0].c_str())){
+                    if(treeMap[i+tmp][1]=="num"){
+                        string num = treeMap[i+1+tmp][1];
+                        pushParaArr[pushParaNum] = num;
+                        pushType[pushParaNum] = "i32";
+                        for(k=0; k<num.length(); k++){
+                            if(num[k]=='.'){
+                               pushType[pushParaNum] = "double";
+                            }
+                        }
+                        pushParaNum++;
+                    }
+                    else if(treeMap[i+tmp][1]=="id"){
+                        pushType[pushParaNum] = getType(i+tmp+1,i+tmp+1);
+                        fllvm << "%" << paraCnt << " = load " + pushType[pushParaNum] + "* %" << treeMap[i+tmp+1][1] << endl;
+                        pushParaArr[pushParaNum] = "%" + itos(paraCnt);
+                        paraCnt++;
+                        pushParaNum++;
+                    }
+                    tmp++;
+                }
+                fllvm << "%" << paraCnt << " = call " + type + " @" + funcName + "( ";
+                fllvm << pushType[0] << " " << pushParaArr[0] << " ";
+                for(k=1; k<pushParaNum; k++){
+                    fllvm << " ," << pushType[k] << " " << pushParaArr[k];
+                }
+                fllvm << ")" << endl;
             }
         }
         else if(treeMap[i][1]=="="){
@@ -1093,50 +1177,96 @@ void llvm(){
                 }
             }
             //only assign function
-            else if(treeMap[i+5][1]=="(" && treeMap[i+11][1]==";"){
+            else if(treeMap[i+5][1]=="("){
                 int j, k;
                 int inpar=0;
+                int isArr=0;
+                int paArr=0;
                 string size;
                 if(treeMap[i-2][1]=="]"){
-                    assignTrg = treeMap[i-10][1] + treeMap[i-8][1] + treeMap[i-5][1] + treeMap[i-2][1];
+                    isArr = 1;
                     type = getType(i, i-10);
                     size = getSize(i, i-10);
                     fllvm << "%" << paraCnt << " = getelementptr inbounds [" + size + " x " + type + "]* %" + treeMap[i-10][1] + ", i32 0, i64 " + treeMap[i-5][1] << endl;
                     paraList[paraCnt][0] = "%"+itos(paraCnt);
-                    paraList[paraCnt][1] = assignTrg;
+                    paraList[paraCnt][1] = treeMap[i-10][1] + treeMap[i-8][1] + treeMap[i-5][1] + treeMap[i-2][1];
                     paraList[paraCnt][2] = type;
+                    assignTrg = paraList[paraCnt][0];
+                    paArr = paraCnt;
                     paraCnt++;
                 }
-                //id = id + num + array...
+
                 else{
                     assignTrg = treeMap[i-2][1];
                     type = getType(i, i-2);
                 }
-
-                assignVal = treeMap[i+3][1] + "()";
-                fllvm << "%" << paraCnt << " = call " + type + " @" + assignVal << endl;
-
+                if(treeMap[i+8][1] != ")"){
+                    int tmp=8;
+                    string pushType[16]={};
+                    string pushParaArr[16]={};
+                    int pushParaNum = 0;
+                    int k=0;
+                    assignVal = treeMap[i+3][1];
+                    while(atoi(treeMap[i+tmp][0].c_str())>atoi(treeMap[i+7][0].c_str())){
+                        if(treeMap[i+tmp][1]=="num"){
+                            string num = treeMap[i+1+tmp][1];
+                            pushParaArr[pushParaNum] = num;
+                            pushType[pushParaNum] = "i32";
+                            for(k=0; k<num.length(); k++){
+                                if(num[k]=='.'){
+                                   pushType[pushParaNum] = "double";
+                                }
+                            }
+                            pushParaNum++;
+                        }
+                        else if(treeMap[i+tmp][1]=="id"){
+                            pushType[pushParaNum] = getType(i+tmp+1,i+tmp+1);
+                            fllvm << "%" << paraCnt << " = load " + pushType[pushParaNum] + "* %" << treeMap[i+tmp+1][1] << endl;
+                            pushParaArr[pushParaNum] = "%" + itos(paraCnt);
+                            paraCnt++;
+                            pushParaNum++;
+                        }
+                        tmp++;
+                    }
+                    fllvm << "%" << paraCnt << " = call " + type + " @" + assignVal + "( ";
+                    fllvm << pushType[0] << " " << pushParaArr[0] << " ";
+                    for(k=1; k<pushParaNum; k++){
+                        fllvm << " ," << pushType[k] << " " << pushParaArr[k];
+                    }
+                    fllvm << ")" << endl;
+                }
+                else{
+                    assignVal = treeMap[i+3][1] + "( )";
+                    fllvm << "%" << paraCnt << " = call " + type + " @" + assignVal << endl;
+                }
                 for(j=0; j<scopeRow; j++){
                     if(scopeMap[j][1]==assignTrg)
                         break;
                 }
-                if(scopeMap[j][0]=="0"){
-                    fllvm << "store " + type + " %" << paraCnt << ", " + type + "* @" + assignTrg << endl;
-                    paraCnt++;
-                    fllvm << "%" << paraCnt << " = load " + type + "* @" + assignTrg << endl;
+
+                if(isArr){
+                        fllvm << "store " + type + " " << assignVal << ", " + type + "* " + assignTrg << endl;
+                        fllvm << "%" << paraCnt << " = load " + type + "* " + assignTrg << endl;
+                        paraList[paArr][0] = "%"+itos(paraCnt);
+                        paraCnt++;
                 }
                 else{
-                    fllvm << "store " + type + " %" << paraCnt << ", " + type + "* %" + assignTrg << endl;
+                    if(scopeMap[j][0]=="0"){
+                        fllvm << "store " + type + " %" << paraCnt << ", " + type + "* @" + assignTrg << endl;
+                        paraCnt++;
+                        fllvm << "%" << paraCnt << " = load " + type + "* @" + assignTrg << endl;
+                    }
+                    else{
+                        fllvm << "store " + type + " %" << paraCnt << ", " + type + "* %" + assignTrg << endl;
+                        paraCnt++;
+                        fllvm << "%" << paraCnt << " = load " + type + "* %" + assignTrg << endl;
+                    }
+                    paraList[paraCnt][0] = "%"+itos(paraCnt);
+                    paraList[paraCnt][1] = assignTrg;
+                    paraList[paraCnt][2] = type;
+                    paraList[paraCnt][3] = assignVal;
                     paraCnt++;
-                    fllvm << "%" << paraCnt << " = load " + type + "* %" + assignTrg << endl;
                 }
-                paraList[paraCnt][0] = "%"+itos(paraCnt);
-                paraList[paraCnt][1] = assignTrg;
-                paraList[paraCnt][2] = type;
-                paraList[paraCnt][3] = assignVal;
-                paraCnt++;
-
-
             }
             else{ //calculus
                 int tmp = i+1;
@@ -1170,7 +1300,7 @@ void llvm(){
                     assignTrg = treeMap[i-2][1];
                     type = getType(i, i-2);
                 }
-
+                //store right side
                 while(treeMap[i][0]<=treeMap[tmp][0]){
                     if((treeMap[tmp][0]>treeMap[tmp+1][0] || treeMap[tmp][1]=="(" || treeMap[tmp][1]==")" || treeMap[tmp][1]=="[" || treeMap[tmp][1]=="]") && treeMap[tmp][1]!="epsilon"){
                         calculus[calCnt] = treeMap[tmp][1];
@@ -1185,7 +1315,7 @@ void llvm(){
                     }
                     tmp++;
                 }
-
+                //* /
                 for(j=0; j<calCnt; j++){
                     if(calculus[j]=="*" || calculus[j]=="/"){
                             int r=1, s=1;
@@ -1316,6 +1446,7 @@ void llvm(){
                             paraCnt++;
                     }
                 }
+                // + -
                 for(j=0; j<calCnt; j++){
                     if(calculus[j]=="+" || calculus[j]=="-"){
                             int r=1, s=1;
@@ -1458,8 +1589,8 @@ void llvm(){
                 }
                 else{
                     if(scopeMap[j][0]=="0"){
-                            fllvm << "store " + type + " " << assignVal << ", " + type + "* @" + assignTrg << endl;
-                            fllvm << "%" << paraCnt << " = load " + type + "* @" + assignTrg << endl;
+                        fllvm << "store " + type + " " << assignVal << ", " + type + "* @" + assignTrg << endl;
+                        fllvm << "%" << paraCnt << " = load " + type + "* @" + assignTrg << endl;
                     }
                     else{
                         fllvm << "store " + type + " " << assignVal << ", " + type + "* %" + assignTrg << endl;
@@ -1533,7 +1664,7 @@ void llvm(){
             int inParaListR = 0;
             if(treeMap[i+3][1]=="id"){
                 type = getType(i, i+4);
-                for(j=0; j<paraCnt; j++){
+                for(j=paraCnt-1; j>=0; j--){
                     if(paraList[j][1]==cmpLeft){
                         inParaListL = 1;
                         cmpLeft = paraList[j][0];
@@ -1567,31 +1698,50 @@ void llvm(){
 
             if(treeMap[i][1]=="while"){ //while
                 whileIndex = treeMap[i][0];
+                fllvm << "br label %startWhile" << endl;
                 fllvm << "startWhile:" << endl;
+                if(oper=="=="){
+                    fllvm << "%" << paraCnt << " = icmp eq " + type + " " + cmpLeft + ", " + cmpRight << endl;
+                }
+                else if(oper=="!="){
+                    fllvm << "%" << paraCnt << " = icmp be " + type + " " + cmpLeft + ", " + cmpRight << endl;
+                }
+                else if(oper==">="){
+                    fllvm << "%" << paraCnt << " = icmp sge " + type + " " + cmpLeft + ", " + cmpRight << endl;
+                }
+                else if(oper=="<="){
+                    fllvm << "%" << paraCnt << " = icmp sle " + type + " " + cmpLeft + ", " + cmpRight << endl;
+                }
+                else if(oper==">"){
+                    fllvm << "%" << paraCnt << " = icmp sgt " + type + " " + cmpLeft + ", " + cmpRight << endl;
+                }
+                else if(oper=="<"){
+                    fllvm << "%" << paraCnt << " = icmp slt " + type + " " + cmpLeft + ", " + cmpRight << endl;
+                }
                 fllvm << "br i1 %" << paraCnt << ", label %inWhile, label %endWhile" << endl;
                 fllvm << endl;
                 fllvm << "inWhile:" << endl;
             }
-
-            if(oper=="=="){
-                fllvm << "%" << paraCnt << " = icmp eq " + type + " " + cmpLeft + ", " + cmpRight << endl;
+            else{
+                if(oper=="=="){
+                    fllvm << "%" << paraCnt << " = icmp eq " + type + " " + cmpLeft + ", " + cmpRight << endl;
+                }
+                else if(oper=="!="){
+                    fllvm << "%" << paraCnt << " = icmp be " + type + " " + cmpLeft + ", " + cmpRight << endl;
+                }
+                else if(oper==">="){
+                    fllvm << "%" << paraCnt << " = icmp sge " + type + " " + cmpLeft + ", " + cmpRight << endl;
+                }
+                else if(oper=="<="){
+                    fllvm << "%" << paraCnt << " = icmp sle " + type + " " + cmpLeft + ", " + cmpRight << endl;
+                }
+                else if(oper==">"){
+                    fllvm << "%" << paraCnt << " = icmp sgt " + type + " " + cmpLeft + ", " + cmpRight << endl;
+                }
+                else if(oper=="<"){
+                    fllvm << "%" << paraCnt << " = icmp slt " + type + " " + cmpLeft + ", " + cmpRight << endl;
+                }
             }
-            else if(oper=="!="){
-                fllvm << "%" << paraCnt << " = icmp be " + type + " " + cmpLeft + ", " + cmpRight << endl;
-            }
-            else if(oper==">="){
-                fllvm << "%" << paraCnt << " = icmp sge " + type + " " + cmpLeft + ", " + cmpRight << endl;
-            }
-            else if(oper=="<="){
-                fllvm << "%" << paraCnt << " = icmp sle " + type + " " + cmpLeft + ", " + cmpRight << endl;
-            }
-            else if(oper==">"){
-                fllvm << "%" << paraCnt << " = icmp sgt " + type + " " + cmpLeft + ", " + cmpRight << endl;
-            }
-            else if(oper=="<"){
-                fllvm << "%" << paraCnt << " = icmp slt " + type + " " + cmpLeft + ", " + cmpRight << endl;
-            }
-
             if(treeMap[i][1]=="if"){
                 fllvm << "br i1 %" << paraCnt << ", label %inIf, label %inElse" << endl;
                 fllvm << endl;
