@@ -47,7 +47,7 @@ string followMerge[32][32]={};      //according followBasic array, get the first
 string finalFollowMap[64][32]={};   //store follow products of each nonterminal(according followRelative and followMerge array)
 string llTableMap[256][10]={};      //store llTable
 string treeMap[1024][3]={};
-string paraList[64][4]={};
+string paraList[64][3]={};
 
 
 int grammerRow;                     //the row of grammar
@@ -68,46 +68,46 @@ struct Tree
 
 struct Scope
 {
-	int count;
-	int flag;
+    int count;
+    int flag;
 };
 
 class StackT        //the stack store type "Tree"
 {
-    private:
-        int top;
-        int size;
-        Tree *array;
-    public:
-        StackT(int s)
-        {
-            size=s;
-            array=new Tree[s];
-            top=0;
-        }
+private:
+    int top;
+    int size;
+    Tree *array;
+public:
+    StackT(int s)
+    {
+        size=s;
+        array=new Tree[s];
+        top=0;
+    }
 
-        void push(Tree item)
+    void push(Tree item)
+    {
+        if(top==size)
+            cout<<"Stack is full!"<<endl;
+        else
+            *(array+top)=item;
+        top++;
+    }
+    Tree pop()
+    {
+        if(top==0)
+            cout<<"Stack is empty!"<<endl;
+        else
         {
-            if(top==size)
-                cout<<"Stack is full!"<<endl;
-            else
-                *(array+top)=item;
-            top++;
+            Tree item;
+            top--;
+            item=*(array+top);
+            return item;
         }
-        Tree pop()
-        {
-            if(top==0)
-                cout<<"Stack is empty!"<<endl;
-            else
-            {
-                Tree item;
-                top--;
-                item=*(array+top);
-                return item;
-            }
-            Tree nop;
-            return nop; //never reach
-        }
+        Tree nop;
+        return nop; //never reach
+    }
 };
 
 int main(){
@@ -122,23 +122,6 @@ int main(){
     buildTree(llrow);
     findScope();
     llvm();
-/*
-    for(int i=0; i<scopeRow; i++){
-        for(int j=0; j<6; j++){
-            cout << scopeMap[i][j] << "\t";
-        }
-        cout << endl;
-    }
-
-    cout << endl;
-
-    for(int i=0; i<20; i++){
-        for(int j=0; j<4; j++){
-            cout << paraList[i][j] << "\t";
-        }
-        cout << endl;
-    }
-*/
 }
 
 void readGrammer(){
@@ -153,7 +136,6 @@ void readGrammer(){
         cout << "Fail to open file" << endl;
         exit(1);
     }
-
     while(fr.getline(line,sizeof(line),'\n')){
         while(line[col]!='\0'){
             if(line[col]=='\t'){
@@ -472,7 +454,7 @@ int setLLTable(){
 int is_epsilon(string str, string sym){
     int graRow;
     int tmp;
-    int i, j=1;
+
     for(graRow=0; graRow<96; graRow++){
         if(str == grammerMap[graRow][0]){
             break;
@@ -578,8 +560,8 @@ void simple_Lexical(){
 
 int is_keyword(string str){
     if(str=="int" || str=="char" || str=="double" || str=="float" || str=="if" || str=="else" || str=="while" || str=="break" ||  str=="for" || str=="print" || str=="return" ||
-            str=="{" || str=="}" || str=="[" || str=="]" || str=="(" || str==")" || str==";" || str=="," || str=="+" || str=="-" || str=="*" || str=="/" || str=="=" ||
-            str==">" || str=="<" || str==">=" || str=="<=" || str=="!" || str=="!=" || str=="==" || str=="&&" || str=="||"){
+       str=="{" || str=="}" || str=="[" || str=="]" || str=="(" || str==")" || str==";" || str=="," || str=="+" || str=="-" || str=="*" || str=="/" || str=="=" ||
+       str==">" || str=="<" || str==">=" || str=="<=" || str=="!" || str=="!=" || str=="==" || str=="&&" || str=="||"){
         return 1;
     }
     else{
@@ -601,7 +583,6 @@ void buildTree(int llrow){
     mainCnt = 0;
     int llcnt = 2;
     int refR, index;
-    int scpCnt=0;
     int scopeCounter = 0;
     int scopeT[64]={0};
     int scopePtr=0;
@@ -679,7 +660,7 @@ void buildTree(int llrow){
     if(tmpTree.value == "$" && mainMap[mainCnt] == "$"){
         treeMap[treeRow][0] = "2";
         treeMap[treeRow][1] = "$";
-     //   cout << "Accept!" << endl;
+        //   cout << "Accept!" << endl;
     }
     else{
         cout << "Reject!" << endl;
@@ -688,7 +669,7 @@ void buildTree(int llrow){
 }
 
 void findScope(){
-    int i, j, k;
+    int i, j;
     int scopeCounter = 0;
     int scopeT[64]={0};
     int scopePtr=0;
@@ -700,99 +681,99 @@ void findScope(){
     scopeRow=1;
 
     for(i=0; i<mainCnt; i++){
-           if((mainMap[i]=="{" && mainMap[i-2]=="(") || mainMap[i]=="if" || mainMap[i]=="else" || mainMap[i]=="while"){
-                scopeCounter++;
-                scopePtr++;
-                scopeT[scopePtr] = scopeCounter;
+        if((mainMap[i]=="{" && mainMap[i-2]=="(") || mainMap[i]=="if" || mainMap[i]=="else" || mainMap[i]=="while"){
+            scopeCounter++;
+            scopePtr++;
+            scopeT[scopePtr] = scopeCounter;
+        }
+        else if(mainMap[i]=="}"){
+            scopePtr--;
+        }
+        else if(mainMap[i]=="int" || mainMap[i]=="double"){
+            scopeMap[scopeRow][0] = itos(scopeT[scopePtr]);
+            scopeMap[scopeRow][1] = mainMap[i+2];
+            scopeMap[scopeRow][2] = mainMap[i];
+            if(mainMap[i+3]=="["){
+                scopeMap[scopeRow][3] = "true";
+                scopeMap[scopeRow][5] = mainMap[i+5];
             }
-            else if(mainMap[i]=="}"){
-                scopePtr--;
+            else{
+                scopeMap[scopeRow][3] = "false";
             }
-            else if(mainMap[i]=="int" || mainMap[i]=="double"){
-                scopeMap[scopeRow][0] = itos(scopeT[scopePtr]);
-                scopeMap[scopeRow][1] = mainMap[i+2];
-                scopeMap[scopeRow][2] = mainMap[i];
-                if(mainMap[i+3]=="["){
-                    scopeMap[scopeRow][3] = "true";
-                    scopeMap[scopeRow][5] = mainMap[i+5];
+            if(mainMap[i+3]=="("){
+                scopeMap[scopeRow][4] = "true";
+                if(mainMap[i+4]!=")"){
+                    scopeCounter++;
+                    scopePtr++;
+                    scopeT[scopePtr] = scopeCounter;
                 }
-                else{
-                    scopeMap[scopeRow][3] = "false";
-                }
-                if(mainMap[i+3]=="("){
-                    scopeMap[scopeRow][4] = "true";
-                    if(mainMap[i+4]!=")"){
-                        scopeCounter++;
-                        scopePtr++;
-                        scopeT[scopePtr] = scopeCounter;
-                    }
-                }
-                else{
-                    scopeMap[scopeRow][4] = "false";
-                }
-                scopeRow++;
             }
-            else if(mainMap[i] == "==" || mainMap[i] == "!=" || mainMap[i] == ">=" ||
-                    mainMap[i] == "<=" || mainMap[i] == ">" || mainMap[i] == "<" || mainMap[i] == "="){
-                    int tmp=1;
-                    int flag=0;
-                    if(mainMap[i-1]=="]"){
-                        targetID = mainMap[i-5]+mainMap[i-4]+mainMap[i-2]+mainMap[i-1];
-                        for(j=scopeRow; j>0; j--){
-                            if(atoi(scopeMap[j][0].c_str())<=scopeT[scopePtr] && scopeMap[j][1]==mainMap[i-5]){
-                                if(scopeMap[j][2]=="int"){
-                                    targetType = "int";
-                                }
-                                else{
-                                    targetType = "double";
-                                }
-                                scp = scopeMap[j][0];
-                            }
-                        }
-                    }
-                    else{
-                        targetID = mainMap[i-1];
-                        for(j=scopeRow; j>0; j--){
-                            if(atoi(scopeMap[j][0].c_str())<=scopeT[scopePtr] && scopeMap[j][1]==mainMap[i-1]){
-                                if(scopeMap[j][2]=="int"){
-                                    targetType = "int";
-                                }
-                                else{
-                                    targetType = "double";
-                                }
-                                scp = scopeMap[j][0];
-                            }
-                        }
-                    }
-                    numType="int";
-                    while(mainMap[i+tmp] != ";" && mainMap[i+tmp] != ")" && mainMap[i+tmp] != "\0"){
-                        if(mainMap[i+tmp]=="id" || mainMap[i+tmp]=="num"){
-                                tmp++;
-                        }
-                        if(mainMap[i+tmp]=="["){
-                                tmp=tmp+4;
+            else{
+                scopeMap[scopeRow][4] = "false";
+            }
+            scopeRow++;
+        }
+        else if(mainMap[i] == "==" || mainMap[i] == "!=" || mainMap[i] == ">=" ||
+                mainMap[i] == "<=" || mainMap[i] == ">" || mainMap[i] == "<" || mainMap[i] == "="){
+            int tmp=1;
+            int flag=0;
+            if(mainMap[i-1]=="]"){
+                targetID = mainMap[i-5]+mainMap[i-4]+mainMap[i-2]+mainMap[i-1];
+                for(j=scopeRow; j>0; j--){
+                    if(atoi(scopeMap[j][0].c_str())<=scopeT[scopePtr] && scopeMap[j][1]==mainMap[i-5]){
+                        if(scopeMap[j][2]=="int"){
+                            targetType = "int";
                         }
                         else{
-                            var = mainMap[i+tmp];
-                            rightType = findType(scopeT[scopePtr], var);
-                            if(rightType=="double"){
-                                numType = "double";
-                            }
-                            else if(rightType=="operator"){
-                                flag = 1;;
-                            }
-                            tmp++;
+                            targetType = "double";
                         }
+                        scp = scopeMap[j][0];
                     }
-                    if(targetType != numType){
-                        if(flag){
-                            cout << "waring (scope " << scp << ") : " << targetID << " " << targetType << ",\ttmp\t" << numType << endl;
+                }
+            }
+            else{
+                targetID = mainMap[i-1];
+                for(j=scopeRow; j>0; j--){
+                    if(atoi(scopeMap[j][0].c_str())<=scopeT[scopePtr] && scopeMap[j][1]==mainMap[i-1]){
+                        if(scopeMap[j][2]=="int"){
+                            targetType = "int";
                         }
                         else{
-                            cout << "waring (scope " << scp << ") : " << targetID << " " << targetType << ",\t" << var << "\t" << numType << endl;
+                            targetType = "double";
                         }
+                        scp = scopeMap[j][0];
                     }
+                }
             }
+            numType="int";
+            while(mainMap[i+tmp] != ";" && mainMap[i+tmp] != ")" && mainMap[i+tmp] != "\0"){
+                if(mainMap[i+tmp]=="id" || mainMap[i+tmp]=="num"){
+                    tmp++;
+                }
+                if(mainMap[i+tmp]=="["){
+                    tmp=tmp+4;
+                }
+                else{
+                    var = mainMap[i+tmp];
+                    rightType = findType(scopeT[scopePtr], var);
+                    if(rightType=="double"){
+                        numType = "double";
+                    }
+                    else if(rightType=="operator"){
+                        flag = 1;;
+                    }
+                    tmp++;
+                }
+            }
+            if(targetType != numType){
+                if(flag){
+                    cout << "waring (scope " << scp << ") : " << targetID << " " << targetType << ",\ttmp\t" << numType << endl;
+                }
+                else{
+                    cout << "waring (scope " << scp << ") : " << targetID << " " << targetType << ",\t" << var << "\t" << numType << endl;
+                }
+            }
+        }
     }
     printToFile();
 }
@@ -832,11 +813,11 @@ void printToFile(){
     scopeMap[0][3] = "Array";
     scopeMap[0][4] = "Function";
     fstream fw;
-    fw.open("Symbol table.txt",ios::out);
-	if(!fw){
-		cout << "Fail to open file" << endl;
-		exit(1);
-	}
+    fw.open("Symbol_table.txt",ios::out);
+    if(!fw){
+        cout << "Fail to open file" << endl;
+        exit(1);
+    }
     for(int i=0; i<scopeRow; i++){
         for(int j=0; j<5; j++){
             fw << scopeMap[i][j] << "\t";
@@ -850,9 +831,8 @@ void llvm(){
     int i;
     int globle = 1;
     int isArray=0;
-    int isNumAssign=0;
     fstream fllvm;
-    fllvm.open("test.ll",ios::out);
+    fllvm.open("hw3.ll",ios::out);
     if(!fllvm){
         cout << "Fail to open file" << endl;
         exit(1);
@@ -871,8 +851,6 @@ void llvm(){
 
     string ifElseIndex = "0";
     string whileIndex = "0";
-    int printInt = 0;
-    int printDou = 0;
 
     fllvm << "@.stri = private unnamed_addr constant[3 x i8] c\"%d\\00\"" << endl;
     fllvm << "@.strd = private unnamed_addr constant[4 x i8] c\"%lf\\00\"" << endl;
@@ -886,19 +864,19 @@ void llvm(){
             funcName = treeMap[i+3][1];
 
             if(treeMap[i+9][1]!=")"){
-                 int funcParNum = 0;
-                 int k;
-                 int tmp = 8;
-                 string funcParType[16]={};
-                 string funcParArr[16]={};
-                 if(funcType=="int"){
+                int funcParNum = 0;
+                int k;
+                int tmp = 8;
+                string funcParType[16]={};
+                string funcParArr[16]={};
+                if(funcType=="int"){
                     fllvm << "define i32 @" << funcName << "( ";
                 }
                 else if(funcType=="double"){
                     fllvm << "define double @" << funcName << "( ";
                 }
 
-                 while(atoi(treeMap[i+tmp][0].c_str()) > atoi(treeMap[i+6][0].c_str())){
+                while(atoi(treeMap[i+tmp][0].c_str()) > atoi(treeMap[i+6][0].c_str())){
                     if(treeMap[i+tmp][1]=="id"){
                         funcParType[funcParNum] = getType(i+tmp+1,i+tmp+1);
                         funcParArr[funcParNum] = treeMap[i+tmp+1][1];
@@ -1012,7 +990,7 @@ void llvm(){
                         pushType[pushParaNum] = "i32";
                         for(k=0; k<num.length(); k++){
                             if(num[k]=='.'){
-                               pushType[pushParaNum] = "double";
+                                pushType[pushParaNum] = "double";
                             }
                         }
                         pushParaNum++;
@@ -1040,7 +1018,6 @@ void llvm(){
             if(treeMap[i+6][1]==";" || treeMap[i+7][1]==";"){
                 if(treeMap[i+2][1]=="num"){
                     //array = num
-                    int j;
                     if(treeMap[i-2][1]=="]"){
                         string size;
                         string assType="i32";
@@ -1072,7 +1049,6 @@ void llvm(){
                         paraList[paraCnt][0] = "%"+itos(paraCnt);
                         paraList[paraCnt][1] = assignTrg;
                         paraList[paraCnt][2] = type;
-                        paraList[paraCnt][3] = assignVal;
                         paraCnt++;
                     }
                     //id = num
@@ -1114,40 +1090,16 @@ void llvm(){
                         paraList[paraCnt][0] = "%"+itos(paraCnt);
                         paraList[paraCnt][1] = assignTrg;
                         paraList[paraCnt][2] = type;
-                        paraList[paraCnt][3] = assignVal;
                         paraCnt++;
                     }
                 }
                 else if(treeMap[i+2][1]=="id"){
-                    int j;
                     //array = id
-                    if(treeMap[i-2][1]=="]"){/*
-                        string size;
-                        assignTrg = treeMap[i-10][1] + treeMap[i-8][1] + treeMap[i-5][1] + treeMap[i-2][1];
-                        assignVal = treeMap[i+3][1];
-                        for(j=scopeRow; j>0; j--){
-                            if(scopeMap[j][0]<=treeMap[i][2] && scopeMap[j][1]==treeMap[i-10][1]){
-                                size = scopeMap[j][5];
-                                if(scopeMap[j][2]=="int"){
-                                    type = "i32";
-                                }
-                                else{
-                                    type = "double";
-                                }
-                                break;
-                            }
-                        }
-                        cout << "%" << paraCnt << " = getelementptr inbounds [" + size + " x " + type + "]* %" + treeMap[i-10][1] + ", i32 0, i64 " + treeMap[i-5][1] << endl;
-                        cout << "store " + type + " " + assignVal + ", " + type + "* %" << paraCnt << endl;
-                        paraList[paraCnt][0] = assignTrg;
-                        paraList[paraCnt][1] = type;
-                        paraList[paraCnt][2] = assignVal;
-                        paraList[paraCnt][3] = scopeMap[j][0];
-                        paraCnt++;*/
+                    if(treeMap[i-2][1]=="]"){
                     }
                     //id = id
                     else{
-                        int j, par;
+                        int j, par=0;
                         assignTrg = treeMap[i-2][1];
                         assignVal = treeMap[i+3][1];
                         for(j=0; j<paraCnt; j++){
@@ -1156,9 +1108,7 @@ void llvm(){
                                 par = j;
                                 break;
                             }
-
                         }
-
                         type = getType(i, i-2);
                         if(scopeMap[j][0]=="0"){
                             fllvm << "store " + type + " %" << par << ", " + type + "* @" + assignTrg << endl;
@@ -1171,15 +1121,13 @@ void llvm(){
                         paraList[paraCnt][0] = "%"+itos(paraCnt);
                         paraList[paraCnt][1] = assignTrg;
                         paraList[paraCnt][2] = type;
-                        paraList[paraCnt][3] = assignVal;
                         paraCnt++;
                     }
                 }
             }
             //only assign function
             else if(treeMap[i+5][1]=="("){
-                int j, k;
-                int inpar=0;
+                int j;
                 int isArr=0;
                 int paArr=0;
                 string size;
@@ -1214,7 +1162,7 @@ void llvm(){
                             pushType[pushParaNum] = "i32";
                             for(k=0; k<num.length(); k++){
                                 if(num[k]=='.'){
-                                   pushType[pushParaNum] = "double";
+                                    pushType[pushParaNum] = "double";
                                 }
                             }
                             pushParaNum++;
@@ -1245,10 +1193,10 @@ void llvm(){
                 }
 
                 if(isArr){
-                        fllvm << "store " + type + " " << assignVal << ", " + type + "* " + assignTrg << endl;
-                        fllvm << "%" << paraCnt << " = load " + type + "* " + assignTrg << endl;
-                        paraList[paArr][0] = "%"+itos(paraCnt);
-                        paraCnt++;
+                    fllvm << "store " + type + " " << assignVal << ", " + type + "* " + assignTrg << endl;
+                    fllvm << "%" << paraCnt << " = load " + type + "* " + assignTrg << endl;
+                    paraList[paArr][0] = "%"+itos(paraCnt);
+                    paraCnt++;
                 }
                 else{
                     if(scopeMap[j][0]=="0"){
@@ -1264,15 +1212,13 @@ void llvm(){
                     paraList[paraCnt][0] = "%"+itos(paraCnt);
                     paraList[paraCnt][1] = assignTrg;
                     paraList[paraCnt][2] = type;
-                    paraList[paraCnt][3] = assignVal;
                     paraCnt++;
                 }
             }
             else{ //calculus
                 int tmp = i+1;
-                int j, k, par;
+                int j, k;
                 int calCnt = 0;
-                int inpar=0;
                 int isArr=0;
                 int paArr=0;
                 string calculus[32]={};
@@ -1318,274 +1264,274 @@ void llvm(){
                 //* /
                 for(j=0; j<calCnt; j++){
                     if(calculus[j]=="*" || calculus[j]=="/"){
-                            int r=1, s=1;
-                            leftType = "null";
-                            rightType = "null";
+                        int r=1, s=1;
+                        leftType = "null";
+                        rightType = "null";
 
-                            while(calculus[j-r]=="space"){
-                                r++;
-                            }
-                            left=calculus[j-r];
-                            while(calculus[j+s]=="space"){
-                                s++;
-                            }
-                            right=calculus[j+s];
+                        while(calculus[j-r]=="space"){
+                            r++;
+                        }
+                        left=calculus[j-r];
+                        while(calculus[j+s]=="space"){
+                            s++;
+                        }
+                        right=calculus[j+s];
 
-                            for(k=0; k<paraCnt; k++){
-                                if(left==paraList[k][1]){
-                                    left = paraList[k][0];
-                                    leftType = paraList[k][2];
-                                }
-                                if(right==paraList[k][1]){
-                                    right = paraList[k][0];
-                                    rightType = paraList[k][2];
-                                }
+                        for(k=paraCnt-1; k>=0; k--){
+                            if(left==paraList[k][1]){
+                                left = paraList[k][0];
+                                leftType = paraList[k][2];
                             }
+                            if(right==paraList[k][1]){
+                                right = paraList[k][0];
+                                rightType = paraList[k][2];
+                            }
+                        }
 
-                            if(leftType=="null"){
-                                leftType = "i32";
-                                for(int l=0; l<left.length(); l++){
-                                    if(left[l]=='.')
-                                        leftType = "double";
-                                }
+                        if(leftType=="null"){
+                            leftType = "i32";
+                            for(int l=0; l<left.length(); l++){
+                                if(left[l]=='.')
+                                    leftType = "double";
                             }
-                            if(rightType=="null"){
-                                rightType = "i32";
-                                for(int l=0; l<right.length(); l++){
-                                    if(right[l]=='.')
-                                        rightType = "double";
-                                }
+                        }
+                        if(rightType=="null"){
+                            rightType = "i32";
+                            for(int l=0; l<right.length(); l++){
+                                if(right[l]=='.')
+                                    rightType = "double";
                             }
+                        }
 
-                            if(calculus[j]=="*"){
-                                if(type=="i32"){
-                                    if(leftType=="i32" && rightType=="double"){
-                                        fllvm << "%" << paraCnt << " = sitofp i32 " + left + " to double" << endl;
-                                        left = "%"+itos(paraCnt);
-                                        paraCnt++;
-                                        fllvm << "%" << paraCnt << " = fmul double " + left + ", " + right << endl;
-                                        paraCnt++;
-                                        fllvm << "%" << paraCnt << " = fptosi double %" << paraCnt-1 << " to i32" << endl;
-                                    }
-                                    else if(leftType=="double" && rightType=="i32"){
-                                        fllvm << "%" << paraCnt << " = sitofp i32 " + right + " to double" << endl;
-                                        right = "%"+itos(paraCnt);
-                                        paraCnt++;
-                                        fllvm << "%" << paraCnt << " = fmul double " + left + ", " + right << endl;
-                                        paraCnt++;
-                                        fllvm << "%" << paraCnt << " = fptosi double %" << paraCnt-1 << " to i32" << endl;
-                                    }
-                                    else if(leftType=="i32" && rightType=="double"){
-                                        fllvm << "%" << paraCnt << " = fmul double " + left + ", " + right << endl;
-                                        paraCnt++;
-                                        fllvm << "%" << paraCnt << " = fptosi double %" << paraCnt-1 << " to i32" << endl;
-                                    }
-                                    else{
-                                        fllvm << "%" << paraCnt << " = mul i32 " + left + ", " + right << endl;
-                                    }
+                        if(calculus[j]=="*"){
+                            if(type=="i32"){
+                                if(leftType=="i32" && rightType=="double"){
+                                    fllvm << "%" << paraCnt << " = sitofp i32 " + left + " to double" << endl;
+                                    left = "%"+itos(paraCnt);
+                                    paraCnt++;
+                                    fllvm << "%" << paraCnt << " = fmul double " + left + ", " + right << endl;
+                                    paraCnt++;
+                                    fllvm << "%" << paraCnt << " = fptosi double %" << paraCnt-1 << " to i32" << endl;
+                                }
+                                else if(leftType=="double" && rightType=="i32"){
+                                    fllvm << "%" << paraCnt << " = sitofp i32 " + right + " to double" << endl;
+                                    right = "%"+itos(paraCnt);
+                                    paraCnt++;
+                                    fllvm << "%" << paraCnt << " = fmul double " + left + ", " + right << endl;
+                                    paraCnt++;
+                                    fllvm << "%" << paraCnt << " = fptosi double %" << paraCnt-1 << " to i32" << endl;
+                                }
+                                else if(leftType=="i32" && rightType=="double"){
+                                    fllvm << "%" << paraCnt << " = fmul double " + left + ", " + right << endl;
+                                    paraCnt++;
+                                    fllvm << "%" << paraCnt << " = fptosi double %" << paraCnt-1 << " to i32" << endl;
                                 }
                                 else{
-                                    if(leftType=="i32"){
-                                        fllvm << "%" << paraCnt << " = sitofp i32 " + left + " to double" << endl;
-                                        left = "%"+itos(paraCnt);
-                                        paraCnt++;
-                                    }
-                                    if(rightType=="i32"){
-                                        fllvm << "%" << paraCnt << " = sitofp i32 " + right + " to double" << endl;
-                                        right = "%"+itos(paraCnt);
-                                        paraCnt++;
-                                    }
-                                    fllvm << "%" << paraCnt << " = fmul double " + left + ", " + right << endl;
+                                    fllvm << "%" << paraCnt << " = mul i32 " + left + ", " + right << endl;
                                 }
                             }
                             else{
-                                if(type=="i32"){
-                                    if(leftType=="i32" && rightType=="double"){
-                                        fllvm << "%" << paraCnt << " = sitofp i32 " + left + " to double" << endl;
-                                        left = "%"+itos(paraCnt);
-                                        paraCnt++;
-                                        fllvm << "%" << paraCnt << " = fdiv double " + left + ", " + right << endl;
-                                        paraCnt++;
-                                        fllvm << "%" << paraCnt << " = fptosi double %" << paraCnt-1 << " to i32" << endl;
-                                    }
-                                    else if(leftType=="double" && rightType=="i32"){
-                                        fllvm << "%" << paraCnt << " = sitofp i32 " + right + " to double" << endl;
-                                        right = "%"+itos(paraCnt);
-                                        paraCnt++;
-                                        fllvm << "%" << paraCnt << " = fdiv double " + left + ", " + right << endl;
-                                        paraCnt++;
-                                        fllvm << "%" << paraCnt << " = fptosi double %" << paraCnt-1 << " to i32" << endl;
-                                    }
-                                    else if(leftType=="i32" && rightType=="double"){
-                                        fllvm << "%" << paraCnt << " = fdiv double " + left + ", " + right << endl;
-                                        paraCnt++;
-                                        fllvm << "%" << paraCnt << " = fptosi double %" << paraCnt-1 << " to i32" << endl;
-                                    }
-                                    else{
-                                        fllvm << "%" << paraCnt << " = sdiv i32 " + left + ", " + right << endl;
-                                    }
+                                if(leftType=="i32"){
+                                    fllvm << "%" << paraCnt << " = sitofp i32 " + left + " to double" << endl;
+                                    left = "%"+itos(paraCnt);
+                                    paraCnt++;
+                                }
+                                if(rightType=="i32"){
+                                    fllvm << "%" << paraCnt << " = sitofp i32 " + right + " to double" << endl;
+                                    right = "%"+itos(paraCnt);
+                                    paraCnt++;
+                                }
+                                fllvm << "%" << paraCnt << " = fmul double " + left + ", " + right << endl;
+                            }
+                        }
+                        else{
+                            if(type=="i32"){
+                                if(leftType=="i32" && rightType=="double"){
+                                    fllvm << "%" << paraCnt << " = sitofp i32 " + left + " to double" << endl;
+                                    left = "%"+itos(paraCnt);
+                                    paraCnt++;
+                                    fllvm << "%" << paraCnt << " = fdiv double " + left + ", " + right << endl;
+                                    paraCnt++;
+                                    fllvm << "%" << paraCnt << " = fptosi double %" << paraCnt-1 << " to i32" << endl;
+                                }
+                                else if(leftType=="double" && rightType=="i32"){
+                                    fllvm << "%" << paraCnt << " = sitofp i32 " + right + " to double" << endl;
+                                    right = "%"+itos(paraCnt);
+                                    paraCnt++;
+                                    fllvm << "%" << paraCnt << " = fdiv double " + left + ", " + right << endl;
+                                    paraCnt++;
+                                    fllvm << "%" << paraCnt << " = fptosi double %" << paraCnt-1 << " to i32" << endl;
+                                }
+                                else if(leftType=="i32" && rightType=="double"){
+                                    fllvm << "%" << paraCnt << " = fdiv double " + left + ", " + right << endl;
+                                    paraCnt++;
+                                    fllvm << "%" << paraCnt << " = fptosi double %" << paraCnt-1 << " to i32" << endl;
                                 }
                                 else{
-                                    if(leftType=="i32"){
-                                        fllvm << "%" << paraCnt << " = sitofp i32 " + left + " to double" << endl;
-                                        left = "%"+itos(paraCnt);
-                                        paraCnt++;
-                                    }
-                                    if(rightType=="i32"){
-                                        fllvm << "%" << paraCnt << " = sitofp i32 " + right + " to double" << endl;
-                                        right = "%"+itos(paraCnt);
-                                        paraCnt++;
-                                    }
-                                    fllvm << "%" << paraCnt << " = fdiv double " + left + ", " + right << endl;
+                                    fllvm << "%" << paraCnt << " = sdiv i32 " + left + ", " + right << endl;
                                 }
                             }
-                            calculus[j] = "%"+itos(paraCnt);
-                            calculus[j-r] = "space";
-                            calculus[j+s] = "space";
-                            assignVal = calculus[j];
-                            paraCnt++;
+                            else{
+                                if(leftType=="i32"){
+                                    fllvm << "%" << paraCnt << " = sitofp i32 " + left + " to double" << endl;
+                                    left = "%"+itos(paraCnt);
+                                    paraCnt++;
+                                }
+                                if(rightType=="i32"){
+                                    fllvm << "%" << paraCnt << " = sitofp i32 " + right + " to double" << endl;
+                                    right = "%"+itos(paraCnt);
+                                    paraCnt++;
+                                }
+                                fllvm << "%" << paraCnt << " = fdiv double " + left + ", " + right << endl;
+                            }
+                        }
+                        calculus[j] = "%"+itos(paraCnt);
+                        calculus[j-r] = "space";
+                        calculus[j+s] = "space";
+                        assignVal = calculus[j];
+                        paraCnt++;
                     }
                 }
                 // + -
                 for(j=0; j<calCnt; j++){
                     if(calculus[j]=="+" || calculus[j]=="-"){
-                            int r=1, s=1;
-                            int inwhilePar=0;
-                            leftType = "null";
-                            rightType = "null";
+                        int r=1, s=1;
+                        int inwhilePar=0;
+                        leftType = "null";
+                        rightType = "null";
 
-                            while(calculus[j-r]=="space"){
-                                r++;
-                            }
-                            left=calculus[j-r];
-                            while(calculus[j+s]=="space"){
-                                s++;
-                            }
-                            right=calculus[j+s];
+                        while(calculus[j-r]=="space"){
+                            r++;
+                        }
+                        left=calculus[j-r];
+                        while(calculus[j+s]=="space"){
+                            s++;
+                        }
+                        right=calculus[j+s];
 
-                            for(k=paraCnt-1; k>=0; k--){
-                                if(left==paraList[k][1]){
-                                    left = paraList[k][0];
-                                    leftType = paraList[k][2];
-                                    inwhilePar = k;
-                                }
-                                if(right==paraList[k][1]){
-                                    right = paraList[k][0];
-                                    rightType = paraList[k][2];
-                                }
+                        for(k=paraCnt-1; k>=0; k--){
+                            if(left==paraList[k][1]){
+                                left = paraList[k][0];
+                                leftType = paraList[k][2];
+                                inwhilePar = k;
                             }
+                            if(right==paraList[k][1]){
+                                right = paraList[k][0];
+                                rightType = paraList[k][2];
+                            }
+                        }
 
-                            if(leftType=="null"){
-                                leftType = "i32";
-                                for(int l=0; l<left.length(); l++){
-                                    if(left[l]=='.')
-                                        leftType = "double";
-                                }
+                        if(leftType=="null"){
+                            leftType = "i32";
+                            for(int l=0; l<left.length(); l++){
+                                if(left[l]=='.')
+                                    leftType = "double";
                             }
-                            if(rightType=="null"){
-                                rightType = "i32";
-                                for(int l=0; l<right.length(); l++){
-                                    if(right[l]=='.')
-                                        rightType = "double";
-                                }
+                        }
+                        if(rightType=="null"){
+                            rightType = "i32";
+                            for(int l=0; l<right.length(); l++){
+                                if(right[l]=='.')
+                                    rightType = "double";
                             }
-                            if(inWhile){
-                                    fllvm << "%" << paraCnt << " = load " + leftType << "* %" + paraList[inwhilePar][1] << endl;
-                                    paraList[paraCnt][0] = "%"+itos(paraCnt);
-                                    paraList[paraCnt][1] = left;
-                                    paraList[paraCnt][2] = type;
-                                    left = paraList[paraCnt][0];
+                        }
+                        if(inWhile){
+                            fllvm << "%" << paraCnt << " = load " + leftType << "* %" + paraList[inwhilePar][1] << endl;
+                            paraList[paraCnt][0] = "%"+itos(paraCnt);
+                            paraList[paraCnt][1] = left;
+                            paraList[paraCnt][2] = type;
+                            left = paraList[paraCnt][0];
+                            paraCnt++;
+                        }
+
+
+                        if(calculus[j]=="+"){
+                            if(type=="i32"){
+                                if(leftType=="i32" && rightType=="double"){
+                                    fllvm << "%" << paraCnt << " = sitofp i32 " + left + " to double" << endl;
+                                    left = "%"+itos(paraCnt);
                                     paraCnt++;
-                            }
-
-
-                            if(calculus[j]=="+"){
-                                if(type=="i32"){
-                                    if(leftType=="i32" && rightType=="double"){
-                                        fllvm << "%" << paraCnt << " = sitofp i32 " + left + " to double" << endl;
-                                        left = "%"+itos(paraCnt);
-                                        paraCnt++;
-                                        fllvm << "%" << paraCnt << " = fadd double " + left + ", " + right << endl;
-                                        paraCnt++;
-                                        fllvm << "%" << paraCnt << " = fptosi double %" << paraCnt-1 << " to i32" << endl;
-                                    }
-                                    else if(leftType=="double" && rightType=="i32"){
-                                        fllvm << "%" << paraCnt << " = sitofp i32 " + right + " to double" << endl;
-                                        right = "%"+itos(paraCnt);
-                                        paraCnt++;
-                                        fllvm << "%" << paraCnt << " = fadd double " + left + ", " + right << endl;
-                                        paraCnt++;
-                                        fllvm << "%" << paraCnt << " = fptosi double %" << paraCnt-1 << " to i32" << endl;
-                                    }
-                                    else if(leftType=="i32" && rightType=="double"){
-                                        fllvm << "%" << paraCnt << " = fadd double " + left + ", " + right << endl;
-                                        paraCnt++;
-                                        fllvm << "%" << paraCnt << " = fptosi double %" << paraCnt-1 << " to i32" << endl;
-                                    }
-                                    else{
-                                        fllvm << "%" << paraCnt << " = add i32 " + left + ", " + right << endl;
-                                    }
+                                    fllvm << "%" << paraCnt << " = fadd double " + left + ", " + right << endl;
+                                    paraCnt++;
+                                    fllvm << "%" << paraCnt << " = fptosi double %" << paraCnt-1 << " to i32" << endl;
+                                }
+                                else if(leftType=="double" && rightType=="i32"){
+                                    fllvm << "%" << paraCnt << " = sitofp i32 " + right + " to double" << endl;
+                                    right = "%"+itos(paraCnt);
+                                    paraCnt++;
+                                    fllvm << "%" << paraCnt << " = fadd double " + left + ", " + right << endl;
+                                    paraCnt++;
+                                    fllvm << "%" << paraCnt << " = fptosi double %" << paraCnt-1 << " to i32" << endl;
+                                }
+                                else if(leftType=="i32" && rightType=="double"){
+                                    fllvm << "%" << paraCnt << " = fadd double " + left + ", " + right << endl;
+                                    paraCnt++;
+                                    fllvm << "%" << paraCnt << " = fptosi double %" << paraCnt-1 << " to i32" << endl;
                                 }
                                 else{
-                                    if(leftType=="i32"){
-                                        fllvm << "%" << paraCnt << " = sitofp i32 " + left + " to double" << endl;
-                                        left = "%"+itos(paraCnt);
-                                        paraCnt++;
-                                    }
-                                    if(rightType=="i32"){
-                                        fllvm << "%" << paraCnt << " = sitofp i32 " + right + " to double" << endl;
-                                        right = "%"+itos(paraCnt);
-                                        paraCnt++;
-                                    }
-                                    fllvm << "%" << paraCnt << " = fadd double " + left + ", " + right << endl;
+                                    fllvm << "%" << paraCnt << " = add i32 " + left + ", " + right << endl;
                                 }
                             }
                             else{
-                                if(type=="i32"){
-                                    if(leftType=="i32" && rightType=="double"){
-                                        fllvm << "%" << paraCnt << " = sitofp i32 " + left + " to double" << endl;
-                                        left = "%"+itos(paraCnt);
-                                        paraCnt++;
-                                        fllvm << "%" << paraCnt << " = fsub double " + left + ", " + right << endl;
-                                        paraCnt++;
-                                        fllvm << "%" << paraCnt << " = fptosi double %" << paraCnt-1 << " to i32" << endl;
-                                    }
-                                    else if(leftType=="double" && rightType=="i32"){
-                                        fllvm << "%" << paraCnt << " = sitofp i32 " + right + " to double" << endl;
-                                        right = "%"+itos(paraCnt);
-                                        paraCnt++;
-                                        fllvm << "%" << paraCnt << " = fsub double " + left + ", " + right << endl;
-                                        paraCnt++;
-                                        fllvm << "%" << paraCnt << " = fptosi double %" << paraCnt-1 << " to i32" << endl;
-                                    }
-                                    else if(leftType=="i32" && rightType=="double"){
-                                        fllvm << "%" << paraCnt << " = fsub double " + left + ", " + right << endl;
-                                        paraCnt++;
-                                        fllvm << "%" << paraCnt << " = fptosi double %" << paraCnt-1 << " to i32" << endl;
-                                    }
-                                    else{
-                                        fllvm << "%" << paraCnt << " = sub i32 " + left + ", " + right << endl;
-                                    }
+                                if(leftType=="i32"){
+                                    fllvm << "%" << paraCnt << " = sitofp i32 " + left + " to double" << endl;
+                                    left = "%"+itos(paraCnt);
+                                    paraCnt++;
+                                }
+                                if(rightType=="i32"){
+                                    fllvm << "%" << paraCnt << " = sitofp i32 " + right + " to double" << endl;
+                                    right = "%"+itos(paraCnt);
+                                    paraCnt++;
+                                }
+                                fllvm << "%" << paraCnt << " = fadd double " + left + ", " + right << endl;
+                            }
+                        }
+                        else{
+                            if(type=="i32"){
+                                if(leftType=="i32" && rightType=="double"){
+                                    fllvm << "%" << paraCnt << " = sitofp i32 " + left + " to double" << endl;
+                                    left = "%"+itos(paraCnt);
+                                    paraCnt++;
+                                    fllvm << "%" << paraCnt << " = fsub double " + left + ", " + right << endl;
+                                    paraCnt++;
+                                    fllvm << "%" << paraCnt << " = fptosi double %" << paraCnt-1 << " to i32" << endl;
+                                }
+                                else if(leftType=="double" && rightType=="i32"){
+                                    fllvm << "%" << paraCnt << " = sitofp i32 " + right + " to double" << endl;
+                                    right = "%"+itos(paraCnt);
+                                    paraCnt++;
+                                    fllvm << "%" << paraCnt << " = fsub double " + left + ", " + right << endl;
+                                    paraCnt++;
+                                    fllvm << "%" << paraCnt << " = fptosi double %" << paraCnt-1 << " to i32" << endl;
+                                }
+                                else if(leftType=="i32" && rightType=="double"){
+                                    fllvm << "%" << paraCnt << " = fsub double " + left + ", " + right << endl;
+                                    paraCnt++;
+                                    fllvm << "%" << paraCnt << " = fptosi double %" << paraCnt-1 << " to i32" << endl;
                                 }
                                 else{
-                                    if(leftType=="i32"){
-                                        fllvm << "%" << paraCnt << " = sitofp i32 " + left + " to double" << endl;
-                                        left = "%"+itos(paraCnt);
-                                        paraCnt++;
-                                    }
-                                    if(rightType=="i32"){
-                                        fllvm << "%" << paraCnt << " = sitofp i32 " + right + " to double" << endl;
-                                        right = "%"+itos(paraCnt);
-                                        paraCnt++;
-                                    }
-                                    fllvm << "%" << paraCnt << " = fsub double " + left + ", " + right << endl;
+                                    fllvm << "%" << paraCnt << " = sub i32 " + left + ", " + right << endl;
                                 }
                             }
-                            calculus[j] = "%"+itos(paraCnt);
-                            calculus[j-r] = "space";
-                            calculus[j+s] = "space";
-                            assignVal = calculus[j];
-                            paraCnt++;
+                            else{
+                                if(leftType=="i32"){
+                                    fllvm << "%" << paraCnt << " = sitofp i32 " + left + " to double" << endl;
+                                    left = "%"+itos(paraCnt);
+                                    paraCnt++;
+                                }
+                                if(rightType=="i32"){
+                                    fllvm << "%" << paraCnt << " = sitofp i32 " + right + " to double" << endl;
+                                    right = "%"+itos(paraCnt);
+                                    paraCnt++;
+                                }
+                                fllvm << "%" << paraCnt << " = fsub double " + left + ", " + right << endl;
+                            }
+                        }
+                        calculus[j] = "%"+itos(paraCnt);
+                        calculus[j-r] = "space";
+                        calculus[j+s] = "space";
+                        assignVal = calculus[j];
+                        paraCnt++;
                     }
                 }
                 for(j=0; j<scopeRow; j++){
@@ -1593,10 +1539,10 @@ void llvm(){
                         break;
                 }
                 if(isArr){
-                        fllvm << "store " + type + " " << assignVal << ", " + type + "* " + assignTrg << endl;
-                        fllvm << "%" << paraCnt << " = load " + type + "* " + assignTrg << endl;
-                        paraList[paArr][0] = "%"+itos(paraCnt);
-                        paraCnt++;
+                    fllvm << "store " + type + " " << assignVal << ", " + type + "* " + assignTrg << endl;
+                    fllvm << "%" << paraCnt << " = load " + type + "* " + assignTrg << endl;
+                    paraList[paArr][0] = "%"+itos(paraCnt);
+                    paraCnt++;
                 }
                 else{
                     if(scopeMap[j][0]=="0"){
@@ -1610,7 +1556,6 @@ void llvm(){
                     paraList[paraCnt][0] = "%"+itos(paraCnt);
                     paraList[paraCnt][1] = assignTrg;
                     paraList[paraCnt][2] = type;
-                    paraList[paraCnt][3] = assignVal;
                     paraCnt++;
                 }
             }
@@ -1628,34 +1573,22 @@ void llvm(){
             }
             if(inParaList){
                 if(printType=="i32"){
-                    if(printInt==0){
-                        printInt==1;
-                        paraCnt++;
-                    }
+                    paraCnt++;
                     fllvm << "call i32 (i8*, ...)* @printf(i8* getelementptr inbounds ([3 x i8]* @.stri, i32 0, i32 0), i32 " + printVal + ")" << endl;
                 }
                 else{
-                    if(printDou==0){
-                        printDou==1;
-                        paraCnt++;
-                    }
+                    paraCnt++;
                     fllvm << "call i32 (i8*, ...)* @printf(i8* getelementptr inbounds ([4 x i8]* @.strd, i32 0, i32 0), double " + printVal + ")" << endl;
                 }
             }
             else{
                 if(printType=="i32"){
-                    if(printInt==0){
-                        printInt==1;
-                        paraCnt++;
-                    }
+                    paraCnt++;
                     fllvm << "%" << paraCnt << " = load i32* %" + printVal << endl;
                     fllvm << "call i32 (i8*, ...)* @printf(i8* getelementptr inbounds ([3 x i8]* @.stri, i32 0, i32 0), i32 %" << paraCnt << ")" << endl;
                 }
                 else{
-                    if(printDou==0){
-                        printDou==1;
-                        paraCnt++;
-                    }
+                    paraCnt++;
                     fllvm << "%" << paraCnt << " = load double* %" + printVal << endl;
                     fllvm << "call i32 (i8*, ...)* @printf(i8* getelementptr inbounds ([4 x i8]* @.strd, i32 0, i32 0), double %" << paraCnt << ")" << endl;
                 }
@@ -1959,9 +1892,9 @@ string getSize(int i, int k){
 }
 
 string itos(int in){
-        stringstream tmp;
-        tmp << in;
-        string str;
-        tmp >> str;
-        return str;
+    stringstream tmp;
+    tmp << in;
+    string str;
+    tmp >> str;
+    return str;
 }
