@@ -55,6 +55,9 @@ int firstRow;                       //the number of nonterminal
 int mainCnt;
 int treeRow;
 int paraCnt;
+int inWhile = 0;
+int ifCount = 0;
+int whileCnt = 0;
 
 
 struct Tree
@@ -119,7 +122,7 @@ int main(){
     buildTree(llrow);
     findScope();
     llvm();
-
+/*
     for(int i=0; i<scopeRow; i++){
         for(int j=0; j<6; j++){
             cout << scopeMap[i][j] << "\t";
@@ -135,11 +138,7 @@ int main(){
         }
         cout << endl;
     }
-/*
-    int i;
-    for(i=100; i<250; i++){
-        cout << treeMap[i][0] << " " << treeMap[i][1] << " " << treeMap[i][2] << endl;
-    }*/
+*/
 }
 
 void readGrammer(){
@@ -571,7 +570,7 @@ void simple_Lexical(){
             mainCnt++;
         }
         col=0;
-        memset(line, '\0', sizeof(line));
+        memset(line, '\0', sizeof(char) * 128);
     }
     mainMap[mainCnt] = "$";
     fr.close();
@@ -680,10 +679,11 @@ void buildTree(int llrow){
     if(tmpTree.value == "$" && mainMap[mainCnt] == "$"){
         treeMap[treeRow][0] = "2";
         treeMap[treeRow][1] = "$";
-        cout << "Accept!" << endl;
+     //   cout << "Accept!" << endl;
     }
     else{
         cout << "Reject!" << endl;
+        system(0);
     }
 }
 
@@ -1450,6 +1450,7 @@ void llvm(){
                 for(j=0; j<calCnt; j++){
                     if(calculus[j]=="+" || calculus[j]=="-"){
                             int r=1, s=1;
+                            int inwhilePar=0;
                             leftType = "null";
                             rightType = "null";
 
@@ -1462,10 +1463,11 @@ void llvm(){
                             }
                             right=calculus[j+s];
 
-                            for(k=0; k<paraCnt; k++){
+                            for(k=paraCnt-1; k>=0; k--){
                                 if(left==paraList[k][1]){
                                     left = paraList[k][0];
                                     leftType = paraList[k][2];
+                                    inwhilePar = k;
                                 }
                                 if(right==paraList[k][1]){
                                     right = paraList[k][0];
@@ -1487,6 +1489,15 @@ void llvm(){
                                         rightType = "double";
                                 }
                             }
+                            if(inWhile){
+                                    fllvm << "%" << paraCnt << " = load " + leftType << "* %" + paraList[inwhilePar][1] << endl;
+                                    paraList[paraCnt][0] = "%"+itos(paraCnt);
+                                    paraList[paraCnt][1] = left;
+                                    paraList[paraCnt][2] = type;
+                                    left = paraList[paraCnt][0];
+                                    paraCnt++;
+                            }
+
 
                             if(calculus[j]=="+"){
                                 if(type=="i32"){
@@ -1662,11 +1673,15 @@ void llvm(){
             int j;
             int inParaListL = 0;
             int inParaListR = 0;
+            int inParRowL = 0;
+            int inParRowR = 0;
+
             if(treeMap[i+3][1]=="id"){
                 type = getType(i, i+4);
                 for(j=paraCnt-1; j>=0; j--){
                     if(paraList[j][1]==cmpLeft){
                         inParaListL = 1;
+                        inParRowL = j;
                         cmpLeft = paraList[j][0];
                     }
                 }
@@ -1684,6 +1699,7 @@ void llvm(){
                     if(paraList[j][1]==cmpRight){
                         inParaListR = 1;
                         cmpRight = paraList[j][0];
+                        inParRowL = j;
                     }
                 }
                 if(inParaListL==0){
@@ -1695,57 +1711,135 @@ void llvm(){
                     paraCnt++;
                 }
             }
+            else{
+                string numType="i32";
+                for(int k=0; k<cmpRight.length(); k++){
+                    if(cmpRight[k]=='.'){
+                        numType = "double";
+                        break;
+                    }
+                }
+                if(type=="i32" && numType=="double"){
+                    fllvm << "%" << paraCnt << " = fptosi double " << cmpRight << " to i32" << endl;
+                    cmpRight = "%" + itos(paraCnt);
+                    paraCnt++;
+                }
+                else if(type=="double" && numType=="i32"){
+                    fllvm << "%" << paraCnt << " = sitofp i32 " + cmpRight + " to double" << endl;
+                    cmpRight = "%" + itos(paraCnt);
+                    paraCnt++;
+                }
+            }
 
             if(treeMap[i][1]=="while"){ //while
                 whileIndex = treeMap[i][0];
-                fllvm << "br label %startWhile" << endl;
-                fllvm << "startWhile:" << endl;
-                if(oper=="=="){
-                    fllvm << "%" << paraCnt << " = icmp eq " + type + " " + cmpLeft + ", " + cmpRight << endl;
+                fllvm << "br label %startWhile" + itos(whileCnt) << endl;
+                fllvm << "startWhile" + itos(whileCnt) + ":" << endl;
+                if(inParaListL==1){
+                    fllvm << "%" << paraCnt <<" = load " + type + "* %" + paraList[inParRowL][1] << endl;
+                    paraList[inParRowL][0] = "%"+itos(paraCnt);
+                    paraList[inParRowL][2] = type;
+                    cmpLeft = paraList[inParRowL][0];
+                    paraCnt++;
                 }
-                else if(oper=="!="){
-                    fllvm << "%" << paraCnt << " = icmp be " + type + " " + cmpLeft + ", " + cmpRight << endl;
+                if(inParaListR==1){
+                    fllvm << "%" << paraCnt <<" = load " + type + "* %" + paraList[inParRowR][1] << endl;
+                    paraList[inParRowR][0] = "%"+itos(paraCnt);
+                    paraList[inParRowR][2] = type;
+                    cmpRight = paraList[inParRowR][0];
+                    paraCnt++;
                 }
-                else if(oper==">="){
-                    fllvm << "%" << paraCnt << " = icmp sge " + type + " " + cmpLeft + ", " + cmpRight << endl;
+                if(type=="i32"){
+                    if(oper=="=="){
+                        fllvm << "%" << paraCnt << " = icmp eq i32 " + cmpLeft + ", " + cmpRight << endl;
+                    }
+                    else if(oper=="!="){
+                        fllvm << "%" << paraCnt << " = icmp be i32 " + cmpLeft + ", " + cmpRight << endl;
+                    }
+                    else if(oper==">="){
+                        fllvm << "%" << paraCnt << " = icmp sge i32 " + cmpLeft + ", " + cmpRight << endl;
+                    }
+                    else if(oper=="<="){
+                        fllvm << "%" << paraCnt << " = icmp sle i32 " + cmpLeft + ", " + cmpRight << endl;
+                    }
+                    else if(oper==">"){
+                        fllvm << "%" << paraCnt << " = icmp sgt i32 " + cmpLeft + ", " + cmpRight << endl;
+                    }
+                    else if(oper=="<"){
+                        fllvm << "%" << paraCnt << " = icmp slt i32 " + cmpLeft + ", " + cmpRight << endl;
+                    }
                 }
-                else if(oper=="<="){
-                    fllvm << "%" << paraCnt << " = icmp sle " + type + " " + cmpLeft + ", " + cmpRight << endl;
+                else{
+                    if(oper=="=="){
+                        fllvm << "%" << paraCnt << " = fcmp oeq double " + cmpLeft + ", " + cmpRight << endl;
+                    }
+                    else if(oper=="!="){
+                        fllvm << "%" << paraCnt << " = fcmp une double " + cmpLeft + ", " + cmpRight << endl;
+                    }
+                    else if(oper==">="){
+                        fllvm << "%" << paraCnt << " = fcmp oge double " + cmpLeft + ", " + cmpRight << endl;
+                    }
+                    else if(oper=="<="){
+                        fllvm << "%" << paraCnt << " = fcmp ole double " + cmpLeft + ", " + cmpRight << endl;
+                    }
+                    else if(oper==">"){
+                        fllvm << "%" << paraCnt << " = fcmp ogt double " + cmpLeft + ", " + cmpRight << endl;
+                    }
+                    else if(oper=="<"){
+                        fllvm << "%" << paraCnt << " = fcmp olt double " + cmpLeft + ", " + cmpRight << endl;
+                    }
                 }
-                else if(oper==">"){
-                    fllvm << "%" << paraCnt << " = icmp sgt " + type + " " + cmpLeft + ", " + cmpRight << endl;
-                }
-                else if(oper=="<"){
-                    fllvm << "%" << paraCnt << " = icmp slt " + type + " " + cmpLeft + ", " + cmpRight << endl;
-                }
-                fllvm << "br i1 %" << paraCnt << ", label %inWhile, label %endWhile" << endl;
+                fllvm << "br i1 %" << paraCnt << ", label %inWhile" + itos(whileCnt) + ", label %endWhile" + itos(whileCnt) << endl;
                 fllvm << endl;
-                fllvm << "inWhile:" << endl;
+                fllvm << "inWhile" + itos(whileCnt) + ":" << endl;
+                inWhile = 1;
             }
             else{
-                if(oper=="=="){
-                    fllvm << "%" << paraCnt << " = icmp eq " + type + " " + cmpLeft + ", " + cmpRight << endl;
+                if(type=="i32"){
+                    if(oper=="=="){
+                        fllvm << "%" << paraCnt << " = icmp eq i32 " + cmpLeft + ", " + cmpRight << endl;
+                    }
+                    else if(oper=="!="){
+                        fllvm << "%" << paraCnt << " = icmp be i32 " + cmpLeft + ", " + cmpRight << endl;
+                    }
+                    else if(oper==">="){
+                        fllvm << "%" << paraCnt << " = icmp sge i32 " + cmpLeft + ", " + cmpRight << endl;
+                    }
+                    else if(oper=="<="){
+                        fllvm << "%" << paraCnt << " = icmp sle i32 " + cmpLeft + ", " + cmpRight << endl;
+                    }
+                    else if(oper==">"){
+                        fllvm << "%" << paraCnt << " = icmp sgt i32 " + cmpLeft + ", " + cmpRight << endl;
+                    }
+                    else if(oper=="<"){
+                        fllvm << "%" << paraCnt << " = icmp slt i32 " + cmpLeft + ", " + cmpRight << endl;
+                    }
                 }
-                else if(oper=="!="){
-                    fllvm << "%" << paraCnt << " = icmp be " + type + " " + cmpLeft + ", " + cmpRight << endl;
-                }
-                else if(oper==">="){
-                    fllvm << "%" << paraCnt << " = icmp sge " + type + " " + cmpLeft + ", " + cmpRight << endl;
-                }
-                else if(oper=="<="){
-                    fllvm << "%" << paraCnt << " = icmp sle " + type + " " + cmpLeft + ", " + cmpRight << endl;
-                }
-                else if(oper==">"){
-                    fllvm << "%" << paraCnt << " = icmp sgt " + type + " " + cmpLeft + ", " + cmpRight << endl;
-                }
-                else if(oper=="<"){
-                    fllvm << "%" << paraCnt << " = icmp slt " + type + " " + cmpLeft + ", " + cmpRight << endl;
+                else{
+                    if(oper=="=="){
+                        fllvm << "%" << paraCnt << " = fcmp oeq double " + cmpLeft + ", " + cmpRight << endl;
+                    }
+                    else if(oper=="!="){
+                        fllvm << "%" << paraCnt << " = fcmp une double " + cmpLeft + ", " + cmpRight << endl;
+                    }
+                    else if(oper==">="){
+                        fllvm << "%" << paraCnt << " = fcmp oge double " + cmpLeft + ", " + cmpRight << endl;
+                    }
+                    else if(oper=="<="){
+                        fllvm << "%" << paraCnt << " = fcmp ole double " + cmpLeft + ", " + cmpRight << endl;
+                    }
+                    else if(oper==">"){
+                        fllvm << "%" << paraCnt << " = fcmp ogt double " + cmpLeft + ", " + cmpRight << endl;
+                    }
+                    else if(oper=="<"){
+                        fllvm << "%" << paraCnt << " = fcmp olt double " + cmpLeft + ", " + cmpRight << endl;
+                    }
                 }
             }
             if(treeMap[i][1]=="if"){
-                fllvm << "br i1 %" << paraCnt << ", label %inIf, label %inElse" << endl;
+                fllvm << "br i1 %" << paraCnt << ", label %inIf" + itos(ifCount) + ", label %inElse" + itos(ifCount) << endl;
                 fllvm << endl;
-                fllvm << "inIf:" << endl;
+                fllvm << "inIf" + itos(ifCount) + ":" << endl;
 
             }
 
@@ -1753,22 +1847,25 @@ void llvm(){
         }
         else if(treeMap[i][1]=="else"){
             ifElseIndex = treeMap[i][0];
-            fllvm << "br label %endIfElse" << endl;
+            fllvm << "br label %endIfElse" + itos(ifCount) << endl;
             fllvm << endl;
-            fllvm << "inElse:" << endl;
+            fllvm << "inElse" + itos(ifCount) + ":" << endl;
 
         }
         else if(treeMap[i][0]<ifElseIndex){
             ifElseIndex = "0";
-            fllvm << "br label %endIfElse" << endl;
+            fllvm << "br label %endIfElse" + itos(ifCount) << endl;
             fllvm << endl;
-            fllvm << "endIfElse:" << endl;
+            fllvm << "endIfElse" + itos(ifCount) + ":" << endl;
+            ifCount++;
         }
         else if(treeMap[i][0]<whileIndex){
             whileIndex = "0";
-            fllvm << "br label %startWhile" << endl;
+            fllvm << "br label %startWhile" + itos(whileCnt) << endl;
             fllvm << endl;
-            fllvm << "endWhile:" << endl;
+            fllvm << "endWhile" + itos(whileCnt) + ":" << endl;
+            whileCnt++;
+            inWhile = 0;
         }
         else if(treeMap[i][1]=="return"){
             int j;
